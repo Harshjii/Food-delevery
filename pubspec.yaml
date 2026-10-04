@@ -1,0 +1,45 @@
+name: food_delivery_app
+description: "A food delivery app with WhatsApp checkout."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # State Management (Cart & State ke liye)
+  provider: ^6.1.2
+
+  # Modern Fonts (UI ke liye)
+  google_fonts: ^6.2.1
+
+  # User Live Location lene ke liye
+  geolocator: ^13.0.2
+
+  # WhatsApp redirect & Google Maps URL launch karne ke liye
+  url_launcher: ^6.3.1
+
+  # Device gallery/camera se photo pick karne ke liye
+  image_picker: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  # Launcher app icon generator
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
