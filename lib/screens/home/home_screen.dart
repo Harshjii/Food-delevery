@@ -355,7 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(food.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                             const SizedBox(height: 2),
-                            Text("\$${food.price}", style: const TextStyle(color: brandColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text("\Rs. ${food.price}", style: const TextStyle(color: brandColor, fontWeight: FontWeight.bold, fontSize: 14)),
                             const SizedBox(height: 8),
                             Expanded(
                               child: Center(

@@ -334,7 +334,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(food.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              Text("${food.restaurant} • \$${food.price}", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                              Text("${food.restaurant} • \Rs. ${food.price}", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                               Text("${food.calories} cal | ${food.deliveryTimeMin} min", style: const TextStyle(fontSize: 11, color: brandOrange)),
                             ],
                           ),

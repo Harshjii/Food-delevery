@@ -80,7 +80,7 @@ class CartScreen extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(item.food.restaurant, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
                           const SizedBox(height: 6),
-                          Text("\$${item.totalPrice.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          Text("\Rs. ${item.totalPrice.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         ],
                       ),
                     ),
@@ -154,7 +154,7 @@ class CartScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text("Subtotal", style: TextStyle(color: Colors.grey)),
-                Text("\$${cart.subtotal.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text("\Rs. ${cart.subtotal.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -162,7 +162,7 @@ class CartScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text("Delivery", style: TextStyle(color: Colors.grey)),
-                Text("\$${cart.deliveryFee.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text("\Rs. ${cart.deliveryFee.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             const Divider(height: 24),
@@ -170,7 +170,7 @@ class CartScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text("Total", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                Text("\$${cart.grandTotal.toStringAsFixed(2)}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: brandGreen)),
+                Text("\Rs. ${cart.grandTotal.toStringAsFixed(2)}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: brandGreen)),
               ],
             ),
             const SizedBox(height: 30),
@@ -196,7 +196,7 @@ class CartScreen extends StatelessWidget {
                   );
                 },
                 child: Text(
-                  "Checkout  •  \$${cart.grandTotal.toStringAsFixed(2)}",
+                  "Checkout  •  \Rs. ${cart.grandTotal.toStringAsFixed(2)}",
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),

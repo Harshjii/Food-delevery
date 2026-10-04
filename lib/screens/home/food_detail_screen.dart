@@ -113,7 +113,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                           const SizedBox(height: 6),
                           Text(_sizes[index]['label'], style: TextStyle(fontSize: 11, color: Colors.grey[700])),
                           const SizedBox(height: 4),
-                          Text("\$${_sizes[index]['price']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          Text("\Rs. ${_sizes[index]['price']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         ],
                       ),
                     ),
@@ -192,7 +192,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const CartScreen()));
                   },
                   child: Text(
-                    "Add to Cart  •  \$${(_sizes[_selectedSizeIndex]['price'] * _quantity).toStringAsFixed(2)}",
+                    "Add to Cart  •  \Rs. ${(_sizes[_selectedSizeIndex]['price'] * _quantity).toStringAsFixed(2)}",
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
                   ),
                 ),

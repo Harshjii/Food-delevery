@@ -117,7 +117,7 @@ class OrdersScreen extends StatelessWidget {
                               style: const TextStyle(fontSize: 13, color: Colors.black87),
                             ),
                             Text(
-                              "\$${((it['price'] as num) * (it['quantity'] as num)).toStringAsFixed(2)}",
+                              "\Rs. ${((it['price'] as num) * (it['quantity'] as num)).toStringAsFixed(2)}",
                               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                             ),
                           ],
@@ -132,7 +132,7 @@ class OrdersScreen extends StatelessWidget {
                       children: [
                         const Text("Total Bill", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         Text(
-                          "\$${total.toStringAsFixed(2)}",
+                          "\Rs. ${total.toStringAsFixed(2)}",
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: brandOrange),
                         ),
                       ],

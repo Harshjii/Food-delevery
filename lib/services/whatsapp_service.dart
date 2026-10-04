@@ -13,7 +13,7 @@ class WhatsAppService {
     required Position position,
   }) async {
     final String itemsSummary = cartItems.map((item) {
-      return "• ${item.food.name} (${item.size}) x${item.quantity} = \$${item.totalPrice.toStringAsFixed(2)}";
+      return "• ${item.food.name} (${item.size}) x${item.quantity} = \Rs. ${item.totalPrice.toStringAsFixed(2)}";
     }).join("\n");
 
     final String mapsLink = "https://maps.google.com/?q=${position.latitude},${position.longitude}";
@@ -28,7 +28,7 @@ class WhatsAppService {
 🛒 *Items Ordered:*
 $itemsSummary
 
-💵 *Total Amount:* \$${totalAmount.toStringAsFixed(2)}
+💵 *Total Amount:* \Rs. ${totalAmount.toStringAsFixed(2)}
 
 📍 *Live Delivery Location:*
 $mapsLink
