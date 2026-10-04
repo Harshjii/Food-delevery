@@ -5,7 +5,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+
+  // Web Server Client ID configured
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: '685775433685-sf1cae4gl6qou4cf1v3gkb4kh9v8vmbf.apps.googleusercontent.com',
+  );
 
   Stream<User?> get userStream => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
@@ -60,6 +64,9 @@ class AuthService {
   // Google Sign In
   Future<String?> signInWithGoogle() async {
     try {
+      // Purane cached session ko clear karne ke liye
+      await _googleSignIn.signOut();
+
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return "Google sign-in cancelled.";
 
