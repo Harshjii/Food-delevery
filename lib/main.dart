@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'providers/cart_provider.dart';
 import 'providers/menu_provider.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/home/home_screen.dart'; // <-- Exact path from your tree
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(
     MultiProvider(
       providers: [
@@ -30,9 +34,22 @@ class FoodDeliveryApp extends StatelessWidget {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.white,
         textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF53B175)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFF5E00)),
       ),
-      home: const LoginScreen(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator(color: Color(0xFFFF5E00))),
+            );
+          }
+          if (snapshot.hasData) {
+            return const HomeScreen(); // <-- Home screen direct open hogi
+          }
+          return const LoginScreen();
+        },
+      ),
     );
   }
 }

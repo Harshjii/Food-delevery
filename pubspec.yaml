@@ -27,6 +27,17 @@ dependencies:
   # Device gallery/camera se photo pick karne ke liye
   image_picker: ^1.1.2
 
+  # Firebase Core, Auth aur Firestore Database
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+
+  # Google Sign In Package (Add this)
+  google_sign_in: ^6.2.2
+
+  # Cloudinary direct image upload ke liye REST client
+  http: ^1.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/menu_provider.dart';
 import '../../services/location_service.dart';
@@ -23,6 +25,24 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
   bool _isFetchingLocation = false;
   bool _isSubmitting = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Logged in user ka displayName pehle se fill kar lo
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.displayName != null && user.displayName!.isNotEmpty) {
+      _nameController.text = user.displayName!;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
   // Dedicated button se GPS location lena
   Future<void> _fetchUserLocation() async {
     setState(() => _isFetchingLocation = true);
@@ -40,7 +60,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("📍 Current GPS location captured!"),
-            backgroundColor: Color(0xFF53B175),
+            backgroundColor: Color(0xFFFF5E00),
             duration: Duration(seconds: 2),
           ),
         );
@@ -80,9 +100,39 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
     }
 
     final cart = Provider.of<CartProvider>(context, listen: false);
-    // Admin dwara set kiya gaya live WhatsApp number le rahe hain
     final menuProv = Provider.of<MenuProvider>(context, listen: false);
+    final user = FirebaseAuth.instance.currentUser;
 
+    // 1. Pehle Cloud Firestore me Order Save karein
+    try {
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('orders').add({
+          'userId': user.uid,
+          'userEmail': user.email ?? '',
+          'customerName': _nameController.text.trim(),
+          'customerPhone': _phoneController.text.trim(),
+          'address': _addressController.text.trim().isEmpty
+              ? "GPS: ${pos.latitude}, ${pos.longitude}"
+              : _addressController.text.trim(),
+          'totalAmount': cart.grandTotal,
+          'status': 'Placed',
+          'createdAt': FieldValue.serverTimestamp(),
+          'latitude': pos.latitude,
+          'longitude': pos.longitude,
+          'items': cart.items.map((item) => {
+            'id': item.food.id,
+            'name': item.food.name,
+            'price': item.food.price,
+            'quantity': item.quantity,
+            'imageUrl': item.food.imageUrl,
+          }).toList(),
+        });
+      }
+    } catch (e) {
+      debugPrint("Error saving order to Firestore: $e");
+    }
+
+    // 2. Ab WhatsApp open karein
     final success = await WhatsAppService.sendOrder(
       adminNumber: menuProv.adminWhatsAppNumber,
       customerName: _nameController.text.trim(),
@@ -113,7 +163,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    const brandGreen = Color(0xFF53B175);
+    const brandOrange = Color(0xFFFF5E00);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -134,7 +184,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                 if (_currentPosition != null)
                   const Chip(
                     label: Text("GPS Locked 🎯", style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
-                    backgroundColor: brandGreen,
+                    backgroundColor: brandOrange,
                     padding: EdgeInsets.zero,
                   )
               ],
@@ -171,20 +221,20 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: brandGreen.withOpacity(0.08),
-                  border: Border.all(color: brandGreen.withOpacity(0.4)),
+                  color: brandOrange.withOpacity(0.08),
+                  border: Border.all(color: brandOrange.withOpacity(0.4)),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Row(
                   children: [
                     _isFetchingLocation
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: brandGreen))
-                        : const Icon(Icons.my_location_rounded, color: brandGreen, size: 22),
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: brandOrange))
+                        : const Icon(Icons.my_location_rounded, color: brandOrange, size: 22),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         _currentPosition == null ? "Tap to fetch Current GPS Location 📍" : "Location Captured ✓ (Tap to refresh)",
-                        style: const TextStyle(color: brandGreen, fontWeight: FontWeight.w600, fontSize: 13),
+                        style: const TextStyle(color: brandOrange, fontWeight: FontWeight.w600, fontSize: 13),
                       ),
                     ),
                   ],
@@ -208,7 +258,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
               height: 52,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: brandGreen,
+                  backgroundColor: brandOrange,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   elevation: 0,
                 ),

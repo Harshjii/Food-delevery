@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../models/food_item.dart';
 import '../../providers/menu_provider.dart';
+import '../../services/cloudinary_service.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -30,9 +31,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final caloriesCtrl = TextEditingController(text: '45');
     final timeCtrl = TextEditingController(text: '20');
     File? selectedImageFile;
+    bool isUploading = false;
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
           Future<void> pickImage(ImageSource source) async {
@@ -48,6 +51,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           }
 
           final screenWidth = MediaQuery.of(context).size.width;
+          const brandOrange = Color(0xFFFF5E00);
 
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -60,7 +64,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   children: [
                     // Image Picker Box
                     GestureDetector(
-                      onTap: () {
+                      onTap: isUploading
+                          ? null
+                          : () {
                         showModalBottomSheet(
                           context: context,
                           builder: (sheetCtx) => SafeArea(
@@ -124,30 +130,60 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+              if (!isUploading)
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("Cancel"),
+                ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF53B175)),
-                onPressed: () {
+                style: ElevatedButton.styleFrom(backgroundColor: brandOrange),
+                onPressed: isUploading
+                    ? null
+                    : () async {
                   if (nameCtrl.text.isNotEmpty && priceCtrl.text.isNotEmpty) {
+                    setDialogState(() {
+                      isUploading = true;
+                    });
+
+                    String finalImageUrl = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500';
+
+                    // Cloudinary par image upload
+                    if (selectedImageFile != null) {
+                      final uploadedUrl = await CloudinaryService.uploadImage(selectedImageFile!);
+                      if (uploadedUrl != null) {
+                        finalImageUrl = uploadedUrl;
+                      }
+                    }
+
                     final newItem = FoodItem(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       name: nameCtrl.text.trim(),
-                      restaurant: restaurantCtrl.text.trim().isEmpty ? 'Chef Special' : restaurantCtrl.text.trim(),
+                      restaurant: restaurantCtrl.text.trim().isEmpty ? 'ZYVO Special' : restaurantCtrl.text.trim(),
                       price: double.tryParse(priceCtrl.text) ?? 5.99,
                       rating: 4.8,
                       reviewsCount: 1,
                       calories: int.tryParse(caloriesCtrl.text) ?? 45,
                       deliveryTimeMin: int.tryParse(timeCtrl.text) ?? 20,
-                      imageUrl: selectedImageFile != null
-                          ? selectedImageFile!.path
-                          : 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500',
+                      imageUrl: finalImageUrl,
                       category: 'Fast Food',
                     );
-                    Navigator.pop(ctx);
-                    Provider.of<MenuProvider>(context, listen: false).addFoodItem(newItem);
+
+                    if (mounted) {
+                      Navigator.pop(ctx);
+                      await Provider.of<MenuProvider>(context, listen: false).addFoodItem(newItem);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Item Added to Cloud Menu! ✅"), backgroundColor: brandOrange),
+                      );
+                    }
                   }
                 },
-                child: const Text("Add to Menu", style: TextStyle(color: Colors.white)),
+                child: isUploading
+                    ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                )
+                    : const Text("Add to Menu", style: TextStyle(color: Colors.white)),
               )
             ],
           );
@@ -163,7 +199,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Icon(Icons.fastfood, size: size * 0.6, color: const Color(0xFF53B175)),
+        errorBuilder: (_, __, ___) => Icon(Icons.fastfood, size: size * 0.6, color: const Color(0xFFFF5E00)),
       );
     } else {
       return Image.file(
@@ -171,14 +207,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Icon(Icons.fastfood, size: size * 0.6, color: const Color(0xFF53B175)),
+        errorBuilder: (_, __, ___) => Icon(Icons.fastfood, size: size * 0.6, color: const Color(0xFFFF5E00)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const brandGreen = Color(0xFF53B175);
+    const brandOrange = Color(0xFFFF5E00);
     final menuProv = Provider.of<MenuProvider>(context);
 
     return Scaffold(
@@ -226,11 +262,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       ),
                       const SizedBox(width: 10),
                       ElevatedButton(
-                        style: ElevatedButton.styleFrom(backgroundColor: brandGreen),
+                        style: ElevatedButton.styleFrom(backgroundColor: brandOrange),
                         onPressed: () {
                           menuProv.updateWhatsAppNumber(_whatsappController.text.trim());
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("WhatsApp Number Updated! ✅"), backgroundColor: brandGreen),
+                            const SnackBar(content: Text("WhatsApp Number Updated! ✅"), backgroundColor: brandOrange),
                           );
                         },
                         child: const Text("Save", style: TextStyle(color: Colors.white)),
@@ -246,7 +282,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               children: [
                 Text("Manage Food Menu (${menuProv.foods.length})", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: brandGreen, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: brandOrange,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                   icon: const Icon(Icons.add, size: 18, color: Colors.white),
                   label: const Text("Add Item", style: TextStyle(color: Colors.white)),
                   onPressed: _showAddFoodDialog,
@@ -254,48 +293,63 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: menuProv.foods.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final food = menuProv.foods[index];
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6)],
-                  ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: _buildFoodImage(food.imageUrl, size: 60),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(food.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                            Text("${food.restaurant} • \$${food.price}", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                            Text("${food.calories} cal | ${food.deliveryTimeMin} min", style: const TextStyle(fontSize: 11, color: brandGreen)),
-                          ],
+            if (menuProv.isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: CircularProgressIndicator(color: brandOrange),
+                ),
+              )
+            else if (menuProv.foods.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Text("Menu is empty. Add your first item!", style: TextStyle(color: Colors.grey)),
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: menuProv.foods.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final food = menuProv.foods[index];
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6)],
+                    ),
+                    child: Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: _buildFoodImage(food.imageUrl, size: 60),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                        onPressed: () {
-                          menuProv.deleteFoodItem(food.id);
-                        },
-                      )
-                    ],
-                  ),
-                );
-              },
-            ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(food.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              Text("${food.restaurant} • \$${food.price}", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                              Text("${food.calories} cal | ${food.deliveryTimeMin} min", style: const TextStyle(fontSize: 11, color: brandOrange)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                          onPressed: () {
+                            menuProv.deleteFoodItem(food.id);
+                          },
+                        )
+                      ],
+                    ),
+                  );
+                },
+              ),
           ],
         ),
       ),

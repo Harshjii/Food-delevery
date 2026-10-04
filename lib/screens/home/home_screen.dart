@@ -1,12 +1,17 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/food_item.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/menu_provider.dart';
+import '../../services/auth_service.dart';
 import '../admin/admin_panel_screen.dart';
+import '../auth/login_screen.dart';
 import '../cart/cart_screen.dart';
 import 'food_detail_screen.dart';
+import 'favorites_screen.dart';
+import 'orders_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +23,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedCategoryIndex = 1;
 
+  // Secret Admin Password
+  static const String _adminSecretPasscode = "zyvo@admin2026";
+
   final List<Map<String, dynamic>> _categories = [
     {'title': 'Meat', 'icon': '🥩'},
     {'title': 'Fast Food', 'icon': '🍔'},
@@ -25,7 +33,68 @@ class _HomeScreenState extends State<HomeScreen> {
     {'title': 'Drinks', 'icon': '🥤'},
   ];
 
-  // Helper widget jo URL aur Device File dono handle karta hai
+  // Secret Admin Access Dialog
+  void _openSecretAdminDialog() {
+    final passCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.security, color: Color(0xFFFF5E00)),
+            SizedBox(width: 8),
+            Text("Admin Access 🔐", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Enter secret admin key to unlock dashboard:",
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: passCtrl,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: "Secret Passcode",
+                prefixIcon: const Icon(Icons.key, color: Colors.grey),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF5E00)),
+            onPressed: () {
+              if (passCtrl.text.trim() == _adminSecretPasscode) {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminPanelScreen()),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Incorrect Admin Passcode! ❌"),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+              }
+            },
+            child: const Text("Verify", style: TextStyle(color: Colors.white)),
+          )
+        ],
+      ),
+    );
+  }
+
+  // Image Loader Widget
   Widget _buildItemImage(String path, {double size = 90}) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return Image.network(
@@ -48,11 +117,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ZYVO signature primary orange
     const brandColor = Color(0xFFFF5E00);
     final cart = Provider.of<CartProvider>(context);
     final menuProv = Provider.of<MenuProvider>(context);
     final List<FoodItem> currentFoods = menuProv.foods;
+
+    // Get user details
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = user?.displayName?.trim();
+    final firstName = (displayName != null && displayName.isNotEmpty)
+        ? displayName.split(' ').first
+        : (user?.email?.split('@').first ?? 'Foodie');
 
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFB),
@@ -62,21 +137,24 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Header with ZYVO Logo
+              // Top Bar with Secret Long-Press Logo
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Image.asset(
-                    'assets/images/logo.png',
-                    height: 38,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Text(
-                      "ZYVO",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        color: brandColor,
+                  GestureDetector(
+                    onLongPress: _openSecretAdminDialog,
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      height: 38,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Text(
+                        "ZYVO",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.5,
+                          color: brandColor,
+                        ),
                       ),
                     ),
                   ),
@@ -87,14 +165,45 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: () {},
                       ),
                       IconButton(
-                        icon: const Icon(Icons.notifications_none_rounded, color: Colors.black87),
-                        onPressed: () {},
+                        icon: const Icon(Icons.logout_rounded, color: Colors.black87),
+                        tooltip: "Logout",
+                        onPressed: () async {
+                          await AuthService().signOut();
+                          if (context.mounted) {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                  (route) => false,
+                            );
+                          }
+                        },
                       ),
                     ],
                   )
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
+
+              // Dynamic Greeting
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Hello, $firstName 👋",
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    "What would you like to eat today?",
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
 
               // Categories Row
               SizedBox(
@@ -139,7 +248,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 15),
 
-              // Offer Banner
+              // Banner
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
@@ -153,14 +262,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text("New Year Offer", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          const Text("Special Offer", style: TextStyle(color: Colors.white70, fontSize: 12)),
                           const SizedBox(height: 4),
                           const Text(
                             "30% OFF",
                             style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 2),
-                          const Text("16 - 31 Dec", style: TextStyle(color: Colors.white54, fontSize: 11)),
+                          const Text("Limited Time Deal", style: TextStyle(color: Colors.white54, fontSize: 11)),
                           const SizedBox(height: 12),
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
@@ -170,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               elevation: 0,
                             ),
                             onPressed: () {},
-                            child: const Text("Get Now", style: TextStyle(fontSize: 12, color: Colors.white)),
+                            child: const Text("Order Now", style: TextStyle(fontSize: 12, color: Colors.white)),
                           )
                         ],
                       ),
@@ -192,87 +301,108 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
 
               // Food Grid Cards
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: currentFoods.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.72,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                ),
-                itemBuilder: (context, index) {
-                  final food = currentFoods[index];
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => FoodDetailScreen(food: food)),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(food.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          const SizedBox(height: 2),
-                          Text("\$${food.price}", style: const TextStyle(color: brandColor, fontWeight: FontWeight.bold, fontSize: 14)),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: Center(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(50),
-                                child: _buildItemImage(food.imageUrl, size: 90),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              const Icon(Icons.local_fire_department, size: 14, color: Colors.deepOrangeAccent),
-                              Text(" ${food.calories} Calories", style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
-                                  Text(" ${food.deliveryTimeMin} min", style: const TextStyle(fontSize: 10, color: Colors.grey)),
-                                ],
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  cart.addItem(food);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text("${food.name} added to cart!"), duration: const Duration(milliseconds: 700)),
-                                  );
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(color: brandColor, borderRadius: BorderRadius.circular(8)),
-                                  child: const Icon(Icons.add, color: Colors.white, size: 16),
+              if (menuProv.isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: CircularProgressIndicator(color: brandColor),
+                  ),
+                )
+              else if (currentFoods.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.restaurant_menu, size: 50, color: Colors.grey),
+                        const SizedBox(height: 10),
+                        Text("No items available right now.", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: currentFoods.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.72,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                  ),
+                  itemBuilder: (context, index) {
+                    final food = currentFoods[index];
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => FoodDetailScreen(food: food)),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4)),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(food.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            const SizedBox(height: 2),
+                            Text("\$${food.price}", style: const TextStyle(color: brandColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: Center(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(50),
+                                  child: _buildItemImage(food.imageUrl, size: 90),
                                 ),
                               ),
-                            ],
-                          )
-                        ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.local_fire_department, size: 14, color: Colors.deepOrangeAccent),
+                                Text(" ${food.calories} Calories", style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
+                                    Text(" ${food.deliveryTimeMin} min", style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                                  ],
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    cart.addItem(food);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text("${food.name} added to cart!"), duration: const Duration(milliseconds: 700)),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(color: brandColor, borderRadius: BorderRadius.circular(8)),
+                                    child: const Icon(Icons.add, color: Colors.white, size: 16),
+                                  ),
+                                ),
+                              ],
+                            )
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ),
             ],
           ),
         ),
@@ -285,10 +415,10 @@ class _HomeScreenState extends State<HomeScreen> {
           boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)],
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               decoration: BoxDecoration(color: brandColor, borderRadius: BorderRadius.circular(25)),
               child: const Row(
                 children: [
@@ -298,7 +428,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            IconButton(icon: const Icon(Icons.favorite_border_rounded, color: Colors.grey), onPressed: () {}),
+            IconButton(
+              icon: const Icon(Icons.favorite_border_rounded, color: Colors.grey),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const FavoritesScreen()),
+                );
+              },
+            ),
             Stack(
               alignment: Alignment.topRight,
               children: [
@@ -316,14 +454,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
               ],
             ),
-            IconButton(icon: const Icon(Icons.receipt_long_outlined, color: Colors.grey), onPressed: () {}),
             IconButton(
-              icon: const Icon(Icons.admin_panel_settings_outlined, color: Colors.grey),
-              tooltip: "Admin Dashboard",
+              icon: const Icon(Icons.receipt_long_outlined, color: Colors.grey),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
+                  MaterialPageRoute(builder: (context) => const OrdersScreen()),
                 );
               },
             ),

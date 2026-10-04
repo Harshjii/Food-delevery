@@ -1,66 +1,86 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/food_item.dart';
 
 class MenuProvider with ChangeNotifier {
-  // Store WhatsApp number jo Admin update kar sake
-  String _adminWhatsAppNumber = "919027723883";
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  List<FoodItem> _foods = [];
+  String _adminWhatsAppNumber = "919876543210";
+  bool _isLoading = true;
+
+  List<FoodItem> get foods => [..._foods];
   String get adminWhatsAppNumber => _adminWhatsAppNumber;
+  bool get isLoading => _isLoading;
 
-  void updateWhatsAppNumber(String newNumber) {
-    _adminWhatsAppNumber = newNumber.replaceAll('+', '').replaceAll(' ', '');
-    notifyListeners();
+  MenuProvider() {
+    _listenToMenuUpdates();
+    _fetchWhatsAppNumber();
   }
 
-  // Active Menu List
-  final List<FoodItem> _foods = [
-    FoodItem(
-      id: '1',
-      name: 'Melting Cheese Pizza',
-      restaurant: 'Pizza Italiano',
-      price: 10.99,
-      rating: 4.8,
-      reviewsCount: 2200,
-      calories: 44,
-      deliveryTimeMin: 20,
-      imageUrl: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=500',
-      category: 'Fast Food',
-    ),
-    FoodItem(
-      id: '2',
-      name: 'Cheese Burger',
-      restaurant: 'Burger Hunt',
-      price: 4.99,
-      rating: 4.7,
-      reviewsCount: 1500,
-      calories: 44,
-      deliveryTimeMin: 20,
-      imageUrl: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500',
-      category: 'Fast Food',
-    ),
-    FoodItem(
-      id: '3',
-      name: 'Chicken Salad',
-      restaurant: 'Melt House',
-      price: 4.56,
-      rating: 4.6,
-      reviewsCount: 890,
-      calories: 32,
-      deliveryTimeMin: 15,
-      imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500',
-      category: 'Fast Food',
-    ),
-  ];
-
-  List<FoodItem> get foods => _foods;
-
-  void addFoodItem(FoodItem item) {
-    _foods.insert(0, item);
-    notifyListeners();
+  // Firestore se real-time menu stream
+  void _listenToMenuUpdates() {
+    _firestore.collection('foods').snapshots().listen((snapshot) {
+      _foods = snapshot.docs.map((doc) {
+        final data = doc.data();
+        return FoodItem(
+          id: doc.id,
+          name: data['name'] ?? '',
+          restaurant: data['restaurant'] ?? 'ZYVO Kitchen',
+          price: (data['price'] as num?)?.toDouble() ?? 0.0,
+          rating: (data['rating'] as num?)?.toDouble() ?? 4.8,
+          reviewsCount: data['reviewsCount'] ?? 1,
+          calories: data['calories'] ?? 45,
+          deliveryTimeMin: data['deliveryTimeMin'] ?? 20,
+          imageUrl: data['imageUrl'] ?? 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500',
+          category: data['category'] ?? 'Fast Food',
+        );
+      }).toList();
+      _isLoading = false;
+      notifyListeners();
+    });
   }
 
-  void deleteFoodItem(String id) {
-    _foods.removeWhere((item) => item.id == id);
+  // Admin WhatsApp setting read karna
+  Future<void> _fetchWhatsAppNumber() async {
+    try {
+      final doc = await _firestore.collection('settings').doc('admin_config').get();
+      if (doc.exists && doc.data() != null) {
+        _adminWhatsAppNumber = doc.data()!['whatsapp_number'] ?? _adminWhatsAppNumber;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Error fetching settings: $e");
+    }
+  }
+
+  // Admin WhatsApp setting save karna
+  Future<void> updateWhatsAppNumber(String newNumber) async {
+    _adminWhatsAppNumber = newNumber;
     notifyListeners();
+    await _firestore.collection('settings').doc('admin_config').set({
+      'whatsapp_number': newNumber,
+    }, SetOptions(merge: true));
+  }
+
+  // Firestore me naya item add karna
+  Future<void> addFoodItem(FoodItem food) async {
+    await _firestore.collection('foods').doc(food.id).set({
+      'name': food.name,
+      'restaurant': food.restaurant,
+      'price': food.price,
+      'rating': food.rating,
+      'reviewsCount': food.reviewsCount,
+      'calories': food.calories,
+      'deliveryTimeMin': food.deliveryTimeMin,
+      'imageUrl': food.imageUrl,
+      'category': food.category,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Firestore se item delete karna
+  Future<void> deleteFoodItem(String id) async {
+    await _firestore.collection('foods').doc(id).delete();
   }
 }

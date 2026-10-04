@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "685775433685",
+    "project_id": "zyvo-app-8e886",
+    "storage_bucket": "zyvo-app-8e886.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685775433685:android:60ebfabe9d2a1ce9b7d75c",
+        "android_client_info": {
+          "package_name": "com.example.food_delivery_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRfplR_M8UlyVg0eIgaAOOu8tBDI8zNDU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
