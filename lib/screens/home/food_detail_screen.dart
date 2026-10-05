@@ -1,4 +1,4 @@
-import 'dart:io'; // <-- 1. File image support ke liye import
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/food_item.dart';
@@ -14,19 +14,31 @@ class FoodDetailScreen extends StatefulWidget {
 }
 
 class _FoodDetailScreenState extends State<FoodDetailScreen> {
-  int _selectedSizeIndex = 1;
   int _quantity = 1;
+  late String _selectedSize;
+  final List<Map<String, dynamic>> _selectedIngredients = [];
 
-  final List<Map<String, dynamic>> _sizes = [
-    {'label': '6" - Small', 'price': 8.99},
-    {'label': '8" - Medium', 'price': 10.99},
-    {'label': '10" - Large', 'price': 12.99},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Default size set karein jo admin ne dala ho
+    if (widget.food.sizePrices.isNotEmpty) {
+      _selectedSize = widget.food.sizePrices.keys.first;
+    } else {
+      _selectedSize = 'Medium';
+    }
+  }
 
-  bool _addChicken = true;
-  bool _addMushroom = false;
+  // Dynamic price calculation: (Size Price + Extra Ingredients Price) * Quantity
+  double get _calculatedTotalPrice {
+    double basePrice = widget.food.sizePrices[_selectedSize] ?? widget.food.price;
+    for (var ing in _selectedIngredients) {
+      basePrice += (ing['price'] as num?)?.toDouble() ?? 0.0;
+    }
+    return basePrice * _quantity;
+  }
 
-  // Helper widget jo Device photo aur Network URL dono render karta hai
+  // Helper widget to render Device photo or Network URL
   Widget _buildDetailImage(String path) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return Image.network(
@@ -74,7 +86,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             Center(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(105),
-                // 2. Helper widget se photo render ho rahi hai
                 child: _buildDetailImage(widget.food.imageUrl),
               ),
             ),
@@ -92,57 +103,78 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Size Options
-            Row(
-              children: List.generate(_sizes.length, (index) {
-                final isSelected = _selectedSizeIndex == index;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedSizeIndex = index),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
-                        border: Border.all(color: isSelected ? brandGreen : Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(isSelected ? Icons.radio_button_checked : Icons.radio_button_off, size: 18, color: isSelected ? brandGreen : Colors.grey),
-                          const SizedBox(height: 6),
-                          Text(_sizes[index]['label'], style: TextStyle(fontSize: 11, color: Colors.grey[700])),
-                          const SizedBox(height: 4),
-                          Text("\Rs. ${_sizes[index]['price']}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        ],
+            // --- DYNAMIC SIZES SELECTOR ---
+            if (widget.food.sizePrices.isNotEmpty) ...[
+              const Text("Select Size", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 12),
+              Row(
+                children: widget.food.sizePrices.entries.map((entry) {
+                  final sizeName = entry.key;
+                  final sizePrice = entry.value;
+                  final isSelected = _selectedSize == sizeName;
+
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => _selectedSize = sizeName),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
+                          border: Border.all(color: isSelected ? brandGreen : Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(isSelected ? Icons.radio_button_checked : Icons.radio_button_off, size: 18, color: isSelected ? brandGreen : Colors.grey),
+                            const SizedBox(height: 6),
+                            Text(sizeName, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[700])),
+                            const SizedBox(height: 4),
+                            Text("Rs. $sizePrice", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(height: 24),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+            ],
 
-            const Text("Add Ingredients", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 12),
+            // --- DYNAMIC INGREDIENTS LIST ---
+            if (widget.food.ingredients.isNotEmpty) ...[
+              const Text("Add Ingredients", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 12),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: widget.food.ingredients.length,
+                itemBuilder: (context, index) {
+                  final ing = widget.food.ingredients[index];
+                  final ingName = ing['name'] ?? '';
+                  final ingPrice = (ing['price'] as num?)?.toDouble() ?? 0.0;
+                  final isChecked = _selectedIngredients.any((item) => item['name'] == ingName);
 
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              activeColor: brandGreen,
-              value: _addChicken,
-              title: const Text("Chicken (250 gm)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-              subtitle: const Text("+\$1.40", style: TextStyle(fontSize: 12, color: Colors.grey)),
-              onChanged: (val) => setState(() => _addChicken = val ?? false),
-            ),
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              activeColor: brandGreen,
-              value: _addMushroom,
-              title: const Text("Mashroom (50 gm)", style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-              subtitle: const Text("+\$0.40", style: TextStyle(fontSize: 12, color: Colors.grey)),
-              onChanged: (val) => setState(() => _addMushroom = val ?? false),
-            ),
-            const SizedBox(height: 20),
+                  return CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    activeColor: brandGreen,
+                    value: isChecked,
+                    title: Text(ingName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                    subtitle: Text("+Rs. $ingPrice", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    onChanged: (bool? val) {
+                      setState(() {
+                        if (val == true) {
+                          _selectedIngredients.add(ing);
+                        } else {
+                          _selectedIngredients.removeWhere((item) => item['name'] == ingName);
+                        }
+                      });
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
           ],
         ),
       ),
@@ -187,12 +219,16 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                   ),
                   onPressed: () {
                     for (int i = 0; i < _quantity; i++) {
-                      cart.addItem(widget.food, size: _sizes[_selectedSizeIndex]['label']);
+                      cart.addItem(
+                        widget.food,
+                        size: _selectedSize,
+                        ingredients: List.from(_selectedIngredients),
+                      );
                     }
                     Navigator.push(context, MaterialPageRoute(builder: (context) => const CartScreen()));
                   },
                   child: Text(
-                    "Add to Cart  •  \Rs. ${(_sizes[_selectedSizeIndex]['price'] * _quantity).toStringAsFixed(2)}",
+                    "Add to Cart  •  Rs. ${_calculatedTotalPrice.toStringAsFixed(2)}",
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
                   ),
                 ),

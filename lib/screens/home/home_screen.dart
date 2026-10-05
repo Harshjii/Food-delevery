@@ -25,6 +25,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedCategoryIndex = 1;
 
+  // Filter states
+  String _selectedFilterCategory = 'All';
+  double _maxPriceFilter = 2000.0;
+  String _searchQuery = '';
+
   // Secret Admin Password
   static const String _adminSecretPasscode = "zyvo@admin2026";
 
@@ -96,6 +101,94 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Filter Bottom Sheet with Price & Category
+  void _showFilterBottomSheet() {
+    String tempCategory = _selectedFilterCategory;
+    double tempPrice = _maxPriceFilter;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateModal) {
+            return Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Filter Options',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Food Category', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    children: ['All', 'Meat', 'Fast Food', 'Sushi', 'Drinks'].map((category) {
+                      return ChoiceChip(
+                        label: Text(category),
+                        selected: tempCategory == category,
+                        selectedColor: const Color(0xFFFF5E00),
+                        labelStyle: TextStyle(
+                          color: tempCategory == category ? Colors.white : Colors.black87,
+                          fontSize: 12,
+                        ),
+                        onSelected: (selected) {
+                          setStateModal(() {
+                            tempCategory = category;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Max Price (Rs. ${tempPrice.round()})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  Slider(
+                    value: tempPrice,
+                    min: 50.0,
+                    max: 2000.0,
+                    divisions: 39,
+                    activeColor: const Color(0xFFFF5E00),
+                    onChanged: (value) {
+                      setStateModal(() {
+                        tempPrice = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF5E00),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _selectedFilterCategory = tempCategory;
+                          _maxPriceFilter = tempPrice;
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Apply Filters', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // Image Loader Widget
   Widget _buildItemImage(String path, {double size = 90}) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -122,14 +215,22 @@ class _HomeScreenState extends State<HomeScreen> {
     const brandColor = Color(0xFFFF5E00);
     final cart = Provider.of<CartProvider>(context);
     final menuProv = Provider.of<MenuProvider>(context);
-    final List<FoodItem> currentFoods = menuProv.foods;
+
+    // Filter logic based on search query, category, and price
+    List<FoodItem> currentFoods = menuProv.foods.where((food) {
+      final matchesSearch = food.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesPrice = food.price <= _maxPriceFilter;
+      final matchesCategory = _selectedFilterCategory == 'All' ||
+          food.category.toLowerCase() == _selectedFilterCategory.toLowerCase();
+      return matchesSearch && matchesPrice && matchesCategory;
+    }).toList();
 
     // Get user details
     final user = FirebaseAuth.instance.currentUser;
     final displayName = user?.displayName?.trim();
     final firstName = (displayName != null && displayName.isNotEmpty)
         ? displayName.split(' ').first
-        : (user?.email?.split('@').first ?? 'Foodie');
+        : (user?.email?.split('@'.trim()).first ?? 'Foodie');
 
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFB),
@@ -139,14 +240,14 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Bar with Secret Long-Press Logo & Notification Bell
+              // Top Bar with Secret Long-Press Logo (.jpeg extension fixed), Search, Filter & Notification Icons
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
                     onLongPress: _openSecretAdminDialog,
                     child: Image.asset(
-                      'assets/images/logo.png',
+                      'assets/images/logo.jpeg',
                       height: 38,
                       fit: BoxFit.contain,
                       errorBuilder: (_, __, ___) => const Text(
@@ -162,6 +263,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Row(
                     children: [
+                      // Search Icon
+                      IconButton(
+                        icon: const Icon(Icons.search, color: Colors.black87),
+                        tooltip: "Search",
+                        onPressed: () {
+                          showSearch(
+                            context: context,
+                            delegate: FoodSearchDelegate(menuProv.foods),
+                          );
+                        },
+                      ),
+                      // Filter Icon
+                      IconButton(
+                        icon: const Icon(Icons.tune, color: Colors.black87),
+                        tooltip: "Filter",
+                        onPressed: _showFilterBottomSheet,
+                      ),
                       IconButton(
                         icon: const Icon(Icons.notifications_outlined, color: Colors.black87),
                         tooltip: "Notifications",
@@ -223,7 +341,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemBuilder: (context, index) {
                     final isSelected = index == _selectedCategoryIndex;
                     return GestureDetector(
-                      onTap: () => setState(() => _selectedCategoryIndex = index),
+                      onTap: () {
+                        setState(() {
+                          _selectedCategoryIndex = index;
+                          _selectedFilterCategory = _categories[index]['title'];
+                        });
+                      },
                       child: Column(
                         children: [
                           Container(
@@ -256,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 15),
 
-              // --- DYNAMIC COUPONS BANNER (Black Background Slider) ---
+              // --- DYNAMIC COUPONS BANNER ---
               SizedBox(
                 height: 150,
                 child: StreamBuilder<QuerySnapshot>(
@@ -274,9 +397,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: const Color(0xFF222629),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: Row(
+                        child: const Row(
                           children: [
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -284,12 +407,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Text("Special Offer", style: TextStyle(color: Colors.white70, fontSize: 12)),
                                   SizedBox(height: 4),
                                   Text("ZYVO SPECIAL", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                                  SizedBox(height: 2),
-                                  Text("Use code in cart for discounts", style: TextStyle(color: Colors.white54, fontSize: 11)),
                                 ],
                               ),
                             ),
-                            const Text("🛵🍕", style: TextStyle(fontSize: 50)),
+                            Text("🛵🍕", style: TextStyle(fontSize: 50)),
                           ],
                         ),
                       );
@@ -312,9 +433,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFF222629),
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4)),
-                            ],
                           ),
                           child: Row(
                             children: [
@@ -358,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              // --- Partner Restaurants (Firestore se live) ---
+              // --- Partner Restaurants ---
               const Text("Partner Restaurants", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
 
@@ -477,7 +595,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         const Icon(Icons.restaurant_menu, size: 50, color: Colors.grey),
                         const SizedBox(height: 10),
-                        Text("No items available right now.", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                        Text("No items match your filter/search.", style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                       ],
                     ),
                   ),
@@ -516,7 +634,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(food.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                             const SizedBox(height: 2),
-                            Text("\Rs. ${food.price}", style: const TextStyle(color: brandColor, fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text("Rs. ${food.price}", style: const TextStyle(color: brandColor, fontWeight: FontWeight.bold, fontSize: 14)),
                             const SizedBox(height: 8),
                             Expanded(
                               child: Center(
@@ -627,6 +745,74 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// Search Delegate Helper Class for Searching Food Items
+class FoodSearchDelegate extends SearchDelegate<FoodItem?> {
+  final List<FoodItem> foodList;
+
+  FoodSearchDelegate(this.foodList);
+
+  @override
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () => query = '',
+      ),
+    ];
+  }
+
+  @override
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, null),
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    final results = foodList.where((food) => food.name.toLowerCase().contains(query.toLowerCase())).toList();
+    return ListView.builder(
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final food = results[index];
+        return ListTile(
+          leading: const Icon(Icons.fastfood, color: Color(0xFFFF5E00)),
+          title: Text(food.name),
+          subtitle: Text("Rs. ${food.price}"),
+          onTap: () {
+            close(context, food);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => FoodDetailScreen(food: food)),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    final suggestions = foodList.where((food) => food.name.toLowerCase().contains(query.toLowerCase())).toList();
+    return ListView.builder(
+      itemCount: suggestions.length,
+      itemBuilder: (context, index) {
+        final food = suggestions[index];
+        return ListTile(
+          leading: const Icon(Icons.search, color: Colors.grey, size: 20),
+          title: Text(food.name),
+          subtitle: Text("Rs. ${food.price} • ${food.category}"),
+          onTap: () {
+            query = food.name;
+            showResults(context);
+          },
+        );
+      },
     );
   }
 }

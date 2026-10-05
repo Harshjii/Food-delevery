@@ -27,9 +27,19 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   void _showAddFoodDialog() {
     final nameCtrl = TextEditingController();
     final restaurantCtrl = TextEditingController();
-    final priceCtrl = TextEditingController();
+
+    // Size Price Controllers
+    final smallPriceCtrl = TextEditingController(text: '150');
+    final mediumPriceCtrl = TextEditingController(text: '250');
+    final largePriceCtrl = TextEditingController(text: '350');
+
     final caloriesCtrl = TextEditingController(text: '45');
     final timeCtrl = TextEditingController(text: '20');
+
+    // Ingredients Input List Controllers
+    final ingredientNameCtrl = TextEditingController(text: 'Chicken (250 gm)');
+    final ingredientPriceCtrl = TextEditingController(text: '120');
+
     File? selectedImageFile;
     bool isUploading = false;
 
@@ -57,16 +67,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Text("Add New Food Item 🍔", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             content: SizedBox(
-              width: screenWidth > 450 ? 400 : screenWidth * 0.85,
+              width: screenWidth > 450 ? 450 : screenWidth * 0.85,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Image Picker Box
                     GestureDetector(
-                      onTap: isUploading
-                          ? null
-                          : () {
+                      onTap: isUploading ? null : () {
                         showModalBottomSheet(
                           context: context,
                           builder: (sheetCtx) => SafeArea(
@@ -94,7 +103,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         );
                       },
                       child: Container(
-                        height: 130,
+                        height: 120,
                         width: double.infinity,
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
@@ -109,20 +118,43 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                             : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_a_photo_outlined, size: 36, color: Colors.grey[600]),
-                            const SizedBox(height: 8),
+                            Icon(Icons.add_a_photo_outlined, size: 32, color: Colors.grey[600]),
+                            const SizedBox(height: 6),
                             Text(
-                              "Tap to upload photo from device",
+                              "Tap to upload photo",
                               style: TextStyle(fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Dish Name")),
                     TextField(controller: restaurantCtrl, decoration: const InputDecoration(labelText: "Restaurant/Store Name")),
-                    TextField(controller: priceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Price (\$)")),
+
+                    const SizedBox(height: 14),
+                    const Text("Size Prices (Rs.)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Row(
+                      children: [
+                        Expanded(child: TextField(controller: smallPriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Small"))),
+                        const SizedBox(width: 8),
+                        Expanded(child: TextField(controller: mediumPriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Medium"))),
+                        const SizedBox(width: 8),
+                        Expanded(child: TextField(controller: largePriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Large"))),
+                      ],
+                    ),
+
+                    const SizedBox(height: 14),
+                    const Text("Default Addon / Ingredient", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Row(
+                      children: [
+                        Expanded(flex: 2, child: TextField(controller: ingredientNameCtrl, decoration: const InputDecoration(labelText: "Name (e.g. Chicken)"))),
+                        const SizedBox(width: 8),
+                        Expanded(flex: 1, child: TextField(controller: ingredientPriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Extra Price"))),
+                      ],
+                    ),
+
+                    const SizedBox(height: 14),
                     TextField(controller: caloriesCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Calories")),
                     TextField(controller: timeCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Prep Time (mins)")),
                   ],
@@ -137,17 +169,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: brandOrange),
-                onPressed: isUploading
-                    ? null
-                    : () async {
-                  if (nameCtrl.text.isNotEmpty && priceCtrl.text.isNotEmpty) {
+                onPressed: isUploading ? null : () async {
+                  if (nameCtrl.text.isNotEmpty) {
                     setDialogState(() {
                       isUploading = true;
                     });
 
                     String finalImageUrl = 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500';
 
-                    // Cloudinary par image upload
                     if (selectedImageFile != null) {
                       final uploadedUrl = await CloudinaryService.uploadImage(selectedImageFile!);
                       if (uploadedUrl != null) {
@@ -155,24 +184,45 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       }
                     }
 
+                    // Sizes Map build karein
+                    Map<String, double> sizePricesMap = {
+                      'Small': double.tryParse(smallPriceCtrl.text) ?? 150.0,
+                      'Medium': double.tryParse(mediumPriceCtrl.text) ?? 250.0,
+                      'Large': double.tryParse(largePriceCtrl.text) ?? 350.0,
+                    };
+
+                    // Ingredients List build karein
+                    List<Map<String, dynamic>> ingredientsList = [
+                      {
+                        'name': ingredientNameCtrl.text.trim().isEmpty ? 'Chicken (250 gm)' : ingredientNameCtrl.text.trim(),
+                        'price': double.tryParse(ingredientPriceCtrl.text) ?? 120.0,
+                      },
+                      {
+                        'name': 'Mashroom (50 gm)',
+                        'price': 40.0,
+                      }
+                    ];
+
                     final newItem = FoodItem(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       name: nameCtrl.text.trim(),
                       restaurant: restaurantCtrl.text.trim().isEmpty ? 'ZYVO Special' : restaurantCtrl.text.trim(),
-                      price: double.tryParse(priceCtrl.text) ?? 5.99,
+                      price: sizePricesMap['Medium'] ?? 250.0,
                       rating: 4.8,
                       reviewsCount: 1,
                       calories: int.tryParse(caloriesCtrl.text) ?? 45,
                       deliveryTimeMin: int.tryParse(timeCtrl.text) ?? 20,
                       imageUrl: finalImageUrl,
                       category: 'Fast Food',
+                      sizePrices: sizePricesMap,
+                      ingredients: ingredientsList,
                     );
 
                     if (mounted) {
                       Navigator.pop(ctx);
                       await Provider.of<MenuProvider>(context, listen: false).addFoodItem(newItem);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Item Added to Cloud Menu! ✅"), backgroundColor: brandOrange),
+                        const SnackBar(content: Text("Item Added with Sizes & Ingredients! ✅"), backgroundColor: brandOrange),
                       );
                     }
                   }
@@ -334,7 +384,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(food.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              Text("${food.restaurant} • \Rs. ${food.price}", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                              Text("${food.restaurant} • Rs. ${food.price}", style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                               Text("${food.calories} cal | ${food.deliveryTimeMin} min", style: const TextStyle(fontSize: 11, color: brandOrange)),
                             ],
                           ),

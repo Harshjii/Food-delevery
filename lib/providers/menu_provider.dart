@@ -18,23 +18,11 @@ class MenuProvider with ChangeNotifier {
     _fetchWhatsAppNumber();
   }
 
-  // Firestore se real-time menu stream
+  // Firestore se real-time menu stream using FoodItem.fromFirestore factory
   void _listenToMenuUpdates() {
     _firestore.collection('foods').snapshots().listen((snapshot) {
       _foods = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return FoodItem(
-          id: doc.id,
-          name: data['name'] ?? '',
-          restaurant: data['restaurant'] ?? 'ZYVO Kitchen',
-          price: (data['price'] as num?)?.toDouble() ?? 0.0,
-          rating: (data['rating'] as num?)?.toDouble() ?? 4.8,
-          reviewsCount: data['reviewsCount'] ?? 1,
-          calories: data['calories'] ?? 45,
-          deliveryTimeMin: data['deliveryTimeMin'] ?? 20,
-          imageUrl: data['imageUrl'] ?? 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500',
-          category: data['category'] ?? 'Fast Food',
-        );
+        return FoodItem.fromFirestore(doc);
       }).toList();
       _isLoading = false;
       notifyListeners();
@@ -63,7 +51,7 @@ class MenuProvider with ChangeNotifier {
     }, SetOptions(merge: true));
   }
 
-  // Firestore me naya item add karna
+  // Firestore me naya item add karna (Size prices aur ingredients ke sath)
   Future<void> addFoodItem(FoodItem food) async {
     await _firestore.collection('foods').doc(food.id).set({
       'name': food.name,
@@ -75,6 +63,8 @@ class MenuProvider with ChangeNotifier {
       'deliveryTimeMin': food.deliveryTimeMin,
       'imageUrl': food.imageUrl,
       'category': food.category,
+      'sizePrices': food.sizePrices, // Save sizes Map
+      'ingredients': food.ingredients, // Save ingredients List
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
