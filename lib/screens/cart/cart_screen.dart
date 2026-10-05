@@ -1,11 +1,24 @@
-import 'dart:io'; // <-- 1. File support ke liye import
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
 import 'checkout_dialog.dart';
 
-class CartScreen extends StatelessWidget {
+class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
+
+  @override
+  State<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends State<CartScreen> {
+  final TextEditingController _promoController = TextEditingController();
+
+  @override
+  void dispose() {
+    _promoController.dispose();
+    super.dispose();
+  }
 
   // Helper widget jo device file aur network URL dono render karta hai
   Widget _buildCartImage(String path, {double size = 70}) {
@@ -68,7 +81,6 @@ class CartScreen extends StatelessWidget {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      // 2. Helper widget use kiya device image support ke liye
                       child: _buildCartImage(item.food.imageUrl, size: 70),
                     ),
                     const SizedBox(width: 14),
@@ -114,7 +126,7 @@ class CartScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Promo Code Box
+            // --- Promo Code Box ---
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
@@ -126,24 +138,56 @@ class CartScreen extends StatelessWidget {
                 children: [
                   const Icon(Icons.percent_rounded, size: 18, color: Colors.grey),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: TextField(
+                      controller: _promoController,
                       decoration: InputDecoration(
-                        hintText: "Promo code",
-                        hintStyle: TextStyle(fontSize: 13, color: Colors.grey),
+                        hintText: cart.appliedCouponCode ?? "Promo code",
+                        hintStyle: TextStyle(fontSize: 13, color: cart.appliedCouponCode != null ? brandGreen : Colors.grey),
                         border: InputBorder.none,
                       ),
                     ),
                   ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: brandGreen,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: () {},
-                    child: const Text("Apply", style: TextStyle(fontSize: 12, color: Colors.white)),
-                  )
+                  if (cart.appliedCouponCode != null)
+                    TextButton(
+                      onPressed: () {
+                        cart.removeCoupon();
+                        _promoController.clear();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Coupon removed!')),
+                        );
+                      },
+                      child: const Text("Remove", style: TextStyle(color: Colors.red, fontSize: 12)),
+                    )
+                  else
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: brandGreen,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        if (_promoController.text.trim().isNotEmpty) {
+                          bool success = await cart.applyCoupon(_promoController.text.trim());
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Coupon applied successfully! 🎉'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Invalid code or minimum order not met! ❌'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text("Apply", style: TextStyle(fontSize: 12, color: Colors.white)),
+                    )
                 ],
               ),
             ),
@@ -157,6 +201,16 @@ class CartScreen extends StatelessWidget {
                 Text("\Rs. ${cart.subtotal.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
+            if (cart.discountPercent > 0) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("Discount (${cart.discountPercent.toStringAsFixed(0)}% OFF)", style: const TextStyle(color: Colors.green)),
+                  Text("- \Rs. ${cart.discountAmount.toStringAsFixed(2)}", style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

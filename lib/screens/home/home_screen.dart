@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/food_item.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/menu_provider.dart';
@@ -12,6 +13,7 @@ import '../cart/cart_screen.dart';
 import 'food_detail_screen.dart';
 import 'favorites_screen.dart';
 import 'orders_screen.dart';
+import 'notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -137,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Bar with Secret Long-Press Logo
+              // Top Bar with Secret Long-Press Logo & Notification Bell
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -161,8 +163,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.search_rounded, color: Colors.black87),
-                        onPressed: () {},
+                        icon: const Icon(Icons.notifications_outlined, color: Colors.black87),
+                        tooltip: "Notifications",
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                          );
+                        },
                       ),
                       IconButton(
                         icon: const Icon(Icons.logout_rounded, color: Colors.black87),
@@ -248,44 +256,197 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 15),
 
-              // Banner
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF222629),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Special Offer", style: TextStyle(color: Colors.white70, fontSize: 12)),
-                          const SizedBox(height: 4),
-                          const Text(
-                            "30% OFF",
-                            style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 2),
-                          const Text("Limited Time Deal", style: TextStyle(color: Colors.white54, fontSize: 11)),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: brandColor,
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              elevation: 0,
+              // --- DYNAMIC COUPONS BANNER (Black Background Slider) ---
+              SizedBox(
+                height: 150,
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('coupons').where('isActive', isEqualTo: true).snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Center(child: CircularProgressIndicator(color: brandColor));
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF222629),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text("Special Offer", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                                  SizedBox(height: 4),
+                                  Text("ZYVO SPECIAL", style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                                  SizedBox(height: 2),
+                                  Text("Use code in cart for discounts", style: TextStyle(color: Colors.white54, fontSize: 11)),
+                                ],
+                              ),
                             ),
-                            onPressed: () {},
-                            child: const Text("Order Now", style: TextStyle(fontSize: 12, color: Colors.white)),
-                          )
-                        ],
-                      ),
-                    ),
-                    const Text("🛵🍕", style: TextStyle(fontSize: 55)),
-                  ],
+                            const Text("🛵🍕", style: TextStyle(fontSize: 50)),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final coupons = snapshot.data!.docs;
+
+                    return PageView.builder(
+                      itemCount: coupons.length,
+                      itemBuilder: (context, index) {
+                        final data = coupons[index].data() as Map<String, dynamic>;
+                        final code = data['code'] ?? 'ZYVO';
+                        final discount = data['discountPercent'] ?? 10;
+                        final minOrder = data['minOrder'] ?? 199;
+
+                        return Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.symmetric(horizontal: 2),
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF222629),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4)),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: brandColor,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        code,
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      "$discount% OFF",
+                                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      "Min. order ₹$minOrder • Limited Time Deal",
+                                      style: const TextStyle(color: Colors.white54, fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Text("🎁🍕", style: TextStyle(fontSize: 50)),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // --- Partner Restaurants (Firestore se live) ---
+              const Text("Partner Restaurants", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+
+              SizedBox(
+                height: 160,
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('restaurants').snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator(color: brandColor));
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return const Center(
+                        child: Text("No restaurants available right now.", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      );
+                    }
+
+                    final restaurants = snapshot.data!.docs;
+
+                    return ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: restaurants.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) {
+                        final data = restaurants[index].data() as Map<String, dynamic>;
+                        final name = data['name'] ?? 'Restaurant';
+                        final cuisine = data['cuisine'] ?? 'Fast Food';
+                        final imageUrl = data['imageUrl'] ?? '';
+                        final isOpen = data['isOpen'] ?? true;
+
+                        return Container(
+                          width: 140,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 3)),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: imageUrl.isNotEmpty
+                                    ? Image.network(imageUrl, width: double.infinity, height: 75, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      height: 75,
+                                      color: Colors.orange.shade50,
+                                      child: const Icon(Icons.restaurant, color: brandColor),
+                                    ))
+                                    : Container(
+                                  height: 75,
+                                  color: Colors.orange.shade50,
+                                  child: const Icon(Icons.restaurant, color: brandColor),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                cuisine,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.grey, fontSize: 11),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isOpen ? '● Open' : '● Closed',
+                                style: TextStyle(
+                                  color: isOpen ? Colors.green : Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: 24),

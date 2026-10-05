@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,11 +7,28 @@ import 'package:google_fonts/google_fonts.dart';
 import 'providers/cart_provider.dart';
 import 'providers/menu_provider.dart';
 import 'screens/auth/login_screen.dart';
-import 'screens/home/home_screen.dart'; // <-- Exact path from your tree
+import 'screens/home/home_screen.dart';
+import 'screens/admin/admin_main_layout.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  // Web aur Mobile dono ke liye Firebase properly initialize hoga
+  if (kIsWeb) {
+    await Firebase.initializeApp(
+      options: const FirebaseOptions(
+        apiKey: "AIzaSyCTNdDXANJjwdV9yAoNC5GbykGW7x_OrCY",
+        appId: "1:685775433685:web:760993a31b810342b7d75c",
+        messagingSenderId: "685775433685",
+        projectId: "zyvo-app-8e886",
+        authDomain: "zyvo-app-8e886.firebaseapp.com",
+        storageBucket: "zyvo-app-8e886.firebasestorage.app",
+      ),
+    );
+  } else {
+    await Firebase.initializeApp();
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -32,11 +50,13 @@ class FoodDeliveryApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        scaffoldBackgroundColor: Colors.white,
+        scaffoldBackgroundColor: const Color(0xFFF4F6F9),
         textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFFF5E00)),
       ),
-      home: StreamBuilder<User?>(
+      home: kIsWeb
+          ? const AdminMainLayout() // Browser (Web) par chalne par Admin Panel khulega
+          : StreamBuilder<User?>(     // Mobile par chalne par user auth/home chalega
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -45,7 +65,7 @@ class FoodDeliveryApp extends StatelessWidget {
             );
           }
           if (snapshot.hasData) {
-            return const HomeScreen(); // <-- Home screen direct open hogi
+            return const HomeScreen();
           }
           return const LoginScreen();
         },
