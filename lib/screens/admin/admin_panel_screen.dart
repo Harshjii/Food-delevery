@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/food_item.dart';
 import '../../providers/menu_provider.dart';
 import '../../services/cloudinary_service.dart';
@@ -24,21 +25,31 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _whatsappController.text = menuProv.adminWhatsAppNumber;
   }
 
+  @override
+  void dispose() {
+    _whatsappController.dispose();
+    super.dispose();
+  }
+
   void _showAddFoodDialog() {
     final nameCtrl = TextEditingController();
-    final restaurantCtrl = TextEditingController();
+    String selectedRestaurant = 'ZYVO Special';
 
     // Size Price Controllers
-    final smallPriceCtrl = TextEditingController(text: '150');
+    final smallPriceCtrl = TextEditingController();
     final mediumPriceCtrl = TextEditingController(text: '250');
-    final largePriceCtrl = TextEditingController(text: '350');
+    final largePriceCtrl = TextEditingController();
 
     final caloriesCtrl = TextEditingController(text: '45');
     final timeCtrl = TextEditingController(text: '20');
 
-    // Ingredients Input List Controllers
-    final ingredientNameCtrl = TextEditingController(text: 'Chicken (250 gm)');
-    final ingredientPriceCtrl = TextEditingController(text: '120');
+    // Multiple Ingredients Dynamic Controllers List
+    List<Map<String, TextEditingController>> ingredientControllers = [
+      {
+        'name': TextEditingController(),
+        'price': TextEditingController(),
+      }
+    ];
 
     File? selectedImageFile;
     bool isUploading = false;
@@ -130,29 +141,120 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     ),
                     const SizedBox(height: 12),
                     TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: "Dish Name")),
-                    TextField(controller: restaurantCtrl, decoration: const InputDecoration(labelText: "Restaurant/Store Name")),
+                    const SizedBox(height: 12),
+
+                    // Restaurant Dropdown
+                    FutureBuilder<QuerySnapshot>(
+                      future: FirebaseFirestore.instance.collection('restaurants').get(),
+                      builder: (context, snapshot) {
+                        List<String> restaurantNames = ['ZYVO Special'];
+                        if (snapshot.hasData) {
+                          for (var doc in snapshot.data!.docs) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            if (data['name'] != null && !restaurantNames.contains(data['name'])) {
+                              restaurantNames.add(data['name']);
+                            }
+                          }
+                        }
+
+                        return DropdownButtonFormField<String>(
+                          value: restaurantNames.contains(selectedRestaurant) ? selectedRestaurant : restaurantNames.first,
+                          decoration: InputDecoration(
+                            labelText: "Select Restaurant",
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                          items: restaurantNames.map((name) {
+                            return DropdownMenuItem(value: name, child: Text(name));
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setDialogState(() {
+                                selectedRestaurant = val;
+                              });
+                            }
+                          },
+                        );
+                      },
+                    ),
 
                     const SizedBox(height: 14),
-                    const Text("Size Prices (Rs.)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const Text("Size Prices (Rs.) [Khali chhodne par Not Available rahega]", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.grey)),
+                    const SizedBox(height: 4),
                     Row(
                       children: [
-                        Expanded(child: TextField(controller: smallPriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Small"))),
+                        Expanded(child: TextField(controller: smallPriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Small (Opt)"))),
                         const SizedBox(width: 8),
                         Expanded(child: TextField(controller: mediumPriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Medium"))),
                         const SizedBox(width: 8),
-                        Expanded(child: TextField(controller: largePriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Large"))),
+                        Expanded(child: TextField(controller: largePriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Large (Opt)"))),
                       ],
                     ),
 
                     const SizedBox(height: 14),
-                    const Text("Default Addon / Ingredient", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(flex: 2, child: TextField(controller: ingredientNameCtrl, decoration: const InputDecoration(labelText: "Name (e.g. Chicken)"))),
-                        const SizedBox(width: 8),
-                        Expanded(flex: 1, child: TextField(controller: ingredientPriceCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Extra Price"))),
+                        const Expanded(
+                          child: Text(
+                            "Addons / Ingredients (Optional)",
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            setDialogState(() {
+                              ingredientControllers.add({
+                                'name': TextEditingController(),
+                                'price': TextEditingController(),
+                              });
+                            });
+                          },
+                          icon: const Icon(Icons.add, size: 16, color: brandOrange),
+                          label: const Text("Add More", style: TextStyle(fontSize: 12, color: brandOrange)),
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 4),
+
+                    // Dynamic Ingredients Input Fields
+                    ...ingredientControllers.asMap().entries.map((entry) {
+                      int index = entry.key;
+                      var ctrlMap = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: TextField(
+                                controller: ctrlMap['name'],
+                                decoration: InputDecoration(labelText: "Name #${index + 1} (e.g. Cheese)"),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 1,
+                              child: TextField(
+                                controller: ctrlMap['price'],
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(labelText: "Price"),
+                              ),
+                            ),
+                            if (ingredientControllers.length > 1)
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+                                onPressed: () {
+                                  setDialogState(() {
+                                    ingredientControllers.removeAt(index);
+                                  });
+                                },
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
 
                     const SizedBox(height: 14),
                     TextField(controller: caloriesCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Calories")),
@@ -184,29 +286,27 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       }
                     }
 
-                    // Sizes Map build karein
-                    Map<String, double> sizePricesMap = {
-                      'Small': double.tryParse(smallPriceCtrl.text) ?? 150.0,
-                      'Medium': double.tryParse(mediumPriceCtrl.text) ?? 250.0,
-                      'Large': double.tryParse(largePriceCtrl.text) ?? 350.0,
+                    Map<String, double?> sizePricesMap = {
+                      'Small': smallPriceCtrl.text.trim().isNotEmpty ? double.tryParse(smallPriceCtrl.text) : null,
+                      'Medium': mediumPriceCtrl.text.trim().isNotEmpty ? (double.tryParse(mediumPriceCtrl.text) ?? 250.0) : 250.0,
+                      'Large': largePriceCtrl.text.trim().isNotEmpty ? double.tryParse(largePriceCtrl.text) : null,
                     };
 
-                    // Ingredients List build karein
-                    List<Map<String, dynamic>> ingredientsList = [
-                      {
-                        'name': ingredientNameCtrl.text.trim().isEmpty ? 'Chicken (250 gm)' : ingredientNameCtrl.text.trim(),
-                        'price': double.tryParse(ingredientPriceCtrl.text) ?? 120.0,
-                      },
-                      {
-                        'name': 'Mashroom (50 gm)',
-                        'price': 40.0,
+                    // Multiple ingredients list compile karein
+                    List<Map<String, dynamic>> ingredientsList = [];
+                    for (var ctrlMap in ingredientControllers) {
+                      if (ctrlMap['name']!.text.trim().isNotEmpty) {
+                        ingredientsList.add({
+                          'name': ctrlMap['name']!.text.trim(),
+                          'price': double.tryParse(ctrlMap['price']!.text) ?? 0.0,
+                        });
                       }
-                    ];
+                    }
 
                     final newItem = FoodItem(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       name: nameCtrl.text.trim(),
-                      restaurant: restaurantCtrl.text.trim().isEmpty ? 'ZYVO Special' : restaurantCtrl.text.trim(),
+                      restaurant: selectedRestaurant,
                       price: sizePricesMap['Medium'] ?? 250.0,
                       rating: 4.8,
                       reviewsCount: 1,
@@ -222,7 +322,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       Navigator.pop(ctx);
                       await Provider.of<MenuProvider>(context, listen: false).addFoodItem(newItem);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Item Added with Sizes & Ingredients! ✅"), backgroundColor: brandOrange),
+                        const SnackBar(content: Text("Item Added Successfully! ✅"), backgroundColor: brandOrange),
                       );
                     }
                   }
@@ -283,6 +383,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // WhatsApp Number Config Container
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -326,7 +427,81 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+
+            // --- UPI QR CODE UPLOAD CONTAINER ---
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Admin UPI QR Code", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const SizedBox(height: 6),
+                  const Text("Gallery se QR code ki photo select karke upload karein.", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: GestureDetector(
+                      onTap: () async {
+                        final XFile? picked = await _picker.pickImage(
+                          source: ImageSource.gallery,
+                          imageQuality: 80,
+                        );
+                        if (picked != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Uploading QR Code... ⏳"), backgroundColor: brandOrange),
+                          );
+                          final uploadedUrl = await CloudinaryService.uploadImage(File(picked.path));
+                          if (uploadedUrl != null) {
+                            await menuProv.updateUpiQrUrl(uploadedUrl);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("UPI QR Code Updated Successfully! ✅"), backgroundColor: brandOrange),
+                              );
+                            }
+                          }
+                        }
+                      },
+                      child: Container(
+                        height: 140,
+                        width: 140,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: menuProv.adminUpiQrUrl.isNotEmpty
+                            ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            menuProv.adminUpiQrUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.qr_code_2, size: 60, color: Colors.grey),
+                          ),
+                        )
+                            : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.add_photo_alternate_outlined, size: 36, color: Colors.grey),
+                            const SizedBox(height: 6),
+                            Text(
+                              "Tap to Upload QR",
+                              style: TextStyle(fontSize: 11, color: Colors.grey[700], fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

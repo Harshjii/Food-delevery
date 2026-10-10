@@ -21,15 +21,15 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Default size set karein jo admin ne dala ho
-    if (widget.food.sizePrices.isNotEmpty) {
-      _selectedSize = widget.food.sizePrices.keys.first;
-    } else {
-      _selectedSize = 'Medium';
+    _selectedSize = 'Medium';
+    for (var entry in widget.food.sizePrices.entries) {
+      if (entry.value != null && entry.value! > 0) {
+        _selectedSize = entry.key;
+        break;
+      }
     }
   }
 
-  // Dynamic price calculation: (Size Price + Extra Ingredients Price) * Quantity
   double get _calculatedTotalPrice {
     double basePrice = widget.food.sizePrices[_selectedSize] ?? widget.food.price;
     for (var ing in _selectedIngredients) {
@@ -38,7 +38,6 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
     return basePrice * _quantity;
   }
 
-  // Helper widget to render Device photo or Network URL
   Widget _buildDetailImage(String path) {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return Image.network(
@@ -63,6 +62,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   Widget build(BuildContext context) {
     const brandGreen = Color(0xFF53B175);
     final cart = Provider.of<CartProvider>(context, listen: false);
+    const List<String> standardSizes = ['Small', 'Medium', 'Large'];
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -103,34 +103,61 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
             ),
             const SizedBox(height: 24),
 
-            // --- DYNAMIC SIZES SELECTOR ---
+            // Sizes Selector
             if (widget.food.sizePrices.isNotEmpty) ...[
               const Text("Select Size", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 12),
               Row(
-                children: widget.food.sizePrices.entries.map((entry) {
-                  final sizeName = entry.key;
-                  final sizePrice = entry.value;
-                  final isSelected = _selectedSize == sizeName;
+                children: standardSizes.map((sizeName) {
+                  final double? sizePrice = widget.food.sizePrices[sizeName];
+                  final bool isAvailable = sizePrice != null && sizePrice > 0;
+                  final bool isSelected = _selectedSize == sizeName;
 
                   return Expanded(
                     child: GestureDetector(
-                      onTap: () => setState(() => _selectedSize = sizeName),
+                      onTap: isAvailable ? () => setState(() => _selectedSize = sizeName) : null,
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: isSelected ? const Color(0xFFE8F5E9) : Colors.white,
-                          border: Border.all(color: isSelected ? brandGreen : Colors.grey.shade300),
+                          color: !isAvailable
+                              ? Colors.grey.shade100
+                              : (isSelected ? const Color(0xFFE8F5E9) : Colors.white),
+                          border: Border.all(
+                            color: !isAvailable
+                                ? Colors.grey.shade300
+                                : (isSelected ? brandGreen : Colors.grey.shade300),
+                          ),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Column(
                           children: [
-                            Icon(isSelected ? Icons.radio_button_checked : Icons.radio_button_off, size: 18, color: isSelected ? brandGreen : Colors.grey),
+                            Icon(
+                              isAvailable
+                                  ? (isSelected ? Icons.radio_button_checked : Icons.radio_button_off)
+                                  : Icons.block,
+                              size: 18,
+                              color: isAvailable ? (isSelected ? brandGreen : Colors.grey) : Colors.red.shade300,
+                            ),
                             const SizedBox(height: 6),
-                            Text(sizeName, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey[700])),
+                            Text(
+                              sizeName,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: isAvailable ? Colors.grey[700] : Colors.grey[400],
+                              ),
+                            ),
                             const SizedBox(height: 4),
-                            Text("Rs. $sizePrice", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text(
+                              isAvailable ? "Rs. $sizePrice" : "Not Available",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: isAvailable ? 13 : 10,
+                                color: isAvailable ? Colors.black87 : Colors.red.shade400,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ],
                         ),
                       ),
@@ -141,7 +168,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               const SizedBox(height: 24),
             ],
 
-            // --- DYNAMIC INGREDIENTS LIST ---
+            // --- INGREDIENTS SECTION (Sirf tabhi dikhega jab admin ne add kiya ho) ---
             if (widget.food.ingredients.isNotEmpty) ...[
               const Text("Add Ingredients", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 12),

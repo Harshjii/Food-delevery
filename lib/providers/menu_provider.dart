@@ -7,15 +7,17 @@ class MenuProvider with ChangeNotifier {
 
   List<FoodItem> _foods = [];
   String _adminWhatsAppNumber = "919876543210";
+  String _adminUpiQrUrl = ""; // Admin UPI QR image URL
   bool _isLoading = true;
 
   List<FoodItem> get foods => [..._foods];
   String get adminWhatsAppNumber => _adminWhatsAppNumber;
+  String get adminUpiQrUrl => _adminUpiQrUrl; // Getter for QR URL
   bool get isLoading => _isLoading;
 
   MenuProvider() {
     _listenToMenuUpdates();
-    _fetchWhatsAppNumber();
+    _fetchAdminConfig();
   }
 
   // Firestore se real-time menu stream using FoodItem.fromFirestore factory
@@ -29,12 +31,13 @@ class MenuProvider with ChangeNotifier {
     });
   }
 
-  // Admin WhatsApp setting read karna
-  Future<void> _fetchWhatsAppNumber() async {
+  // Admin WhatsApp aur UPI QR config read karna
+  Future<void> _fetchAdminConfig() async {
     try {
       final doc = await _firestore.collection('settings').doc('admin_config').get();
       if (doc.exists && doc.data() != null) {
         _adminWhatsAppNumber = doc.data()!['whatsapp_number'] ?? _adminWhatsAppNumber;
+        _adminUpiQrUrl = doc.data()!['upi_qr_url'] ?? ''; // Fetch UPI QR URL from Firestore
         notifyListeners();
       }
     } catch (e) {
@@ -48,6 +51,15 @@ class MenuProvider with ChangeNotifier {
     notifyListeners();
     await _firestore.collection('settings').doc('admin_config').set({
       'whatsapp_number': newNumber,
+    }, SetOptions(merge: true));
+  }
+
+  // Admin UPI QR URL save karna
+  Future<void> updateUpiQrUrl(String newUrl) async {
+    _adminUpiQrUrl = newUrl;
+    notifyListeners();
+    await _firestore.collection('settings').doc('admin_config').set({
+      'upi_qr_url': newUrl,
     }, SetOptions(merge: true));
   }
 

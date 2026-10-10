@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
@@ -28,7 +29,6 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
   @override
   void initState() {
     super.initState();
-    // Logged in user ka displayName pehle se fill kar lo
     final user = FirebaseAuth.instance.currentUser;
     if (user != null && user.displayName != null && user.displayName!.isNotEmpty) {
       _nameController.text = user.displayName!;
@@ -43,7 +43,6 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
     super.dispose();
   }
 
-  // Dedicated button se GPS location lena
   Future<void> _fetchUserLocation() async {
     setState(() => _isFetchingLocation = true);
 
@@ -103,7 +102,6 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
     final menuProv = Provider.of<MenuProvider>(context, listen: false);
     final user = FirebaseAuth.instance.currentUser;
 
-    // 1. Pehle Cloud Firestore me Order Save karein
     try {
       if (user != null) {
         await FirebaseFirestore.instance.collection('orders').add({
@@ -122,7 +120,9 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
           'items': cart.items.map((item) => {
             'id': item.food.id,
             'name': item.food.name,
-            'price': item.food.price,
+            'size': item.selectedSize,
+            'ingredients': item.selectedIngredients,
+            'price': item.totalItemPrice / item.quantity,
             'quantity': item.quantity,
             'imageUrl': item.food.imageUrl,
           }).toList(),
@@ -132,7 +132,6 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
       debugPrint("Error saving order to Firestore: $e");
     }
 
-    // 2. Ab WhatsApp open karein
     final success = await WhatsAppService.sendOrder(
       adminNumber: menuProv.adminWhatsAppNumber,
       customerName: _nameController.text.trim(),
@@ -164,6 +163,8 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
   @override
   Widget build(BuildContext context) {
     const brandOrange = Color(0xFFFF5E00);
+    final menuProv = Provider.of<MenuProvider>(context);
+    final cart = Provider.of<CartProvider>(context);
 
     return Padding(
       padding: EdgeInsets.only(
@@ -180,7 +181,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text("Delivery Information 🛵", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text("Delivery & Payment 🛵", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 if (_currentPosition != null)
                   const Chip(
                     label: Text("GPS Locked 🎯", style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
@@ -190,7 +191,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
               ],
             ),
             const SizedBox(height: 6),
-            Text("We'll send your live Google Maps location on WhatsApp.", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+            Text("Enter details and complete payment via UPI QR below.", style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             const SizedBox(height: 18),
 
             TextField(
@@ -214,7 +215,6 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
             ),
             const SizedBox(height: 12),
 
-            // Tap to Use Current Location Button
             InkWell(
               onTap: _isFetchingLocation ? null : _fetchUserLocation,
               borderRadius: BorderRadius.circular(14),
@@ -249,6 +249,50 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                 labelText: "Address / Flat / Landmark",
                 prefixIcon: const Icon(Icons.home_outlined),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // --- UPI QR CODE & PAYMENT INSTRUCTIONS SECTION ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Column(
+                children: [
+                  const Text("Scan QR to Pay via UPI", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  const SizedBox(height: 4),
+                  Text("Total Amount: Rs. ${cart.grandTotal.toStringAsFixed(2)}", style: const TextStyle(color: brandOrange, fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(height: 12),
+
+                  Container(
+                    height: 150,
+                    width: 150,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: menuProv.adminUpiQrUrl.isNotEmpty
+                        ? ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(menuProv.adminUpiQrUrl, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.qr_code_2, size: 80, color: Colors.grey),
+                      ),
+                    )
+                        : const Icon(Icons.qr_code_2, size: 80, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "⚠️ Please send the payment screenshot on WhatsApp after clicking confirm for fast order confirmation!",
+                    style: TextStyle(fontSize: 11, color: Colors.redAccent, fontWeight: FontWeight.w500),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 20),

@@ -14,6 +14,8 @@ import 'food_detail_screen.dart';
 import 'favorites_screen.dart';
 import 'orders_screen.dart';
 import 'notifications_screen.dart';
+import 'restaurant_detail_screen.dart';
+import 'all_foods_screen.dart'; // All Foods Screen import
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // Filter states
   String _selectedFilterCategory = 'All';
   double _maxPriceFilter = 2000.0;
-  String _searchQuery = '';
+  final String _searchQuery = '';
 
   // Secret Admin Password
   static const String _adminSecretPasscode = "zyvo@admin2026";
@@ -230,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final displayName = user?.displayName?.trim();
     final firstName = (displayName != null && displayName.isNotEmpty)
         ? displayName.split(' ').first
-        : (user?.email?.split('@'.trim()).first ?? 'Foodie');
+        : (user?.email?.split('@')?.first ?? 'Foodie');
 
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFB),
@@ -240,7 +242,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top Bar with Secret Long-Press Logo (.jpeg extension fixed), Search, Filter & Notification Icons
+              // Top Bar with Secret Long-Press Logo, Search, Filter & Notification Icons
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -263,7 +265,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Row(
                     children: [
-                      // Search Icon
                       IconButton(
                         icon: const Icon(Icons.search, color: Colors.black87),
                         tooltip: "Search",
@@ -274,7 +275,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         },
                       ),
-                      // Filter Icon
                       IconButton(
                         icon: const Icon(Icons.tune, color: Colors.black87),
                         tooltip: "Filter",
@@ -508,58 +508,72 @@ class _HomeScreenState extends State<HomeScreen> {
                         final imageUrl = data['imageUrl'] ?? '';
                         final isOpen = data['isOpen'] ?? true;
 
-                        return Container(
-                          width: 140,
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 3)),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: imageUrl.isNotEmpty
-                                    ? Image.network(imageUrl, width: double.infinity, height: 75, fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Container(
-                                      height: 75,
-                                      color: Colors.orange.shade50,
-                                      child: const Icon(Icons.restaurant, color: brandColor),
-                                    ))
-                                    : Container(
-                                  height: 75,
-                                  color: Colors.orange.shade50,
-                                  child: const Icon(Icons.restaurant, color: brandColor),
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => RestaurantDetailScreen(
+                                  restaurantName: name,
+                                  restaurantImage: imageUrl,
+                                  cuisine: cuisine,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                cuisine,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(color: Colors.grey, fontSize: 11),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                isOpen ? '● Open' : '● Closed',
-                                style: TextStyle(
-                                  color: isOpen ? Colors.green : Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 10,
+                            );
+                          },
+                          child: Container(
+                            width: 140,
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 3)),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: imageUrl.isNotEmpty
+                                      ? Image.network(imageUrl, width: double.infinity, height: 75, fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        height: 75,
+                                        color: Colors.orange.shade50,
+                                        child: const Icon(Icons.restaurant, color: brandColor),
+                                      ))
+                                      : Container(
+                                    height: 75,
+                                    color: Colors.orange.shade50,
+                                    child: const Icon(Icons.restaurant, color: brandColor),
+                                  ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 8),
+                                Text(
+                                  name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  cuisine,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  isOpen ? '● Open' : '● Closed',
+                                  style: TextStyle(
+                                    color: isOpen ? Colors.green : Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -569,12 +583,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Best Sellers Header
+              // Best Sellers Header with See All Navigation
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text("Best Sellers (${currentFoods.length})", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const Text("See All", style: TextStyle(color: brandColor, fontSize: 13, fontWeight: FontWeight.w600)),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AllFoodsScreen()),
+                      );
+                    },
+                    child: const Text("See All", style: TextStyle(color: brandColor, fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),

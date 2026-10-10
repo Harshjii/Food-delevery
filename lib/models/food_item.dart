@@ -12,9 +12,9 @@ class FoodItem {
   final String imageUrl;
   final String category;
 
-  // New Fields for Sizes and Ingredients
-  final Map<String, double> sizePrices; // e.g., {'Small': 8.99, 'Medium': 10.99, 'Large': 12.99}
-  final List<Map<String, dynamic>> ingredients; // e.g., [{'name': 'Chicken (250 gm)', 'price': 1.40}]
+  // Size Prices ko double? banaya gaya hai taaki unhe nullable (Not Available) rakha ja sake
+  final Map<String, double?> sizePrices;
+  final List<Map<String, dynamic>> ingredients;
 
   FoodItem({
     required this.id,
@@ -51,6 +51,19 @@ class FoodItem {
   // Factory constructor to create FoodItem from Firestore Document
   factory FoodItem.fromFirestore(DocumentSnapshot doc) {
     Map data = doc.data() as Map<String, dynamic>;
+
+    // Safely parse sizePrices with nullable support
+    Map<String, double?> parsedSizes = {'Small': null, 'Medium': 250.0, 'Large': null};
+    if (data['sizePrices'] != null) {
+      data['sizePrices'].forEach((key, value) {
+        if (value != null) {
+          parsedSizes[key.toString()] = (value as num).toDouble();
+        } else {
+          parsedSizes[key.toString()] = null;
+        }
+      });
+    }
+
     return FoodItem(
       id: doc.id,
       name: data['name'] ?? '',
@@ -62,9 +75,7 @@ class FoodItem {
       deliveryTimeMin: data['deliveryTimeMin'] ?? 20,
       imageUrl: data['imageUrl'] ?? '',
       category: data['category'] ?? '',
-      sizePrices: Map<String, double>.from(
-        data['sizePrices'] ?? {'Small': 8.99, 'Medium': 10.99, 'Large': 12.99},
-      ),
+      sizePrices: parsedSizes,
       ingredients: List<Map<String, dynamic>>.from(
         data['ingredients'] ?? [
           {'name': 'Chicken (250 gm)', 'price': 1.40},
