@@ -31,18 +31,17 @@ class MenuProvider with ChangeNotifier {
     });
   }
 
-  // Admin WhatsApp aur UPI QR config read karna
-  Future<void> _fetchAdminConfig() async {
-    try {
-      final doc = await _firestore.collection('settings').doc('admin_config').get();
+  // Admin WhatsApp aur UPI QR config real-time sunna
+  void _fetchAdminConfig() {
+    _firestore.collection('settings').doc('admin_config').snapshots().listen((doc) {
       if (doc.exists && doc.data() != null) {
         _adminWhatsAppNumber = doc.data()!['whatsapp_number'] ?? _adminWhatsAppNumber;
-        _adminUpiQrUrl = doc.data()!['upi_qr_url'] ?? ''; // Fetch UPI QR URL from Firestore
-        notifyListeners();
+        _adminUpiQrUrl = doc.data()!['upi_qr_url'] ?? '';
+        notifyListeners(); // Turant UI update kar dega
       }
-    } catch (e) {
-      debugPrint("Error fetching settings: $e");
-    }
+    }, onError: (e) {
+      debugPrint("Error listening to admin config: $e");
+    });
   }
 
   // Admin WhatsApp setting save karna

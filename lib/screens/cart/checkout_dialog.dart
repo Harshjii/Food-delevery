@@ -163,6 +163,7 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
   @override
   Widget build(BuildContext context) {
     const brandOrange = Color(0xFFFF5E00);
+    // Yahan listen: true (default) hone ki wajah se QR code real-time update hoga
     final menuProv = Provider.of<MenuProvider>(context);
     final cart = Provider.of<CartProvider>(context);
 
@@ -280,7 +281,9 @@ class _CheckoutBottomSheetState extends State<CheckoutBottomSheet> {
                     child: menuProv.adminUpiQrUrl.isNotEmpty
                         ? ClipRRect(
                       borderRadius: BorderRadius.circular(12),
-                      child: Image.network(menuProv.adminUpiQrUrl, fit: BoxFit.cover,
+                      child: Image.network(
+                        menuProv.adminUpiQrUrl,
+                        fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const Icon(Icons.qr_code_2, size: 80, color: Colors.grey),
                       ),
                     )
