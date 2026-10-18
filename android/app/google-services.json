@@ -41,6 +41,43 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:685775433685:android:1ba3f61c0dab6432b7d75c",
+        "android_client_info": {
+          "package_name": "com.zyvo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "685775433685-lcgjcg3qt40jv39lufn2o3ga8vkk2vlj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zyvo.app",
+            "certificate_hash": "dc4173767ebb4445e6d85cdca107e8c2c403282e"
+          }
+        },
+        {
+          "client_id": "685775433685-sf1cae4gl6qou4cf1v3gkb4kh9v8vmbf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRfplR_M8UlyVg0eIgaAOOu8tBDI8zNDU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "685775433685-sf1cae4gl6qou4cf1v3gkb4kh9v8vmbf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

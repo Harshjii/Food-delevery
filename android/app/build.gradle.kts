@@ -15,7 +15,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.food_delivery_app"
+    namespace = "com.zyvo.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -42,7 +42,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.food_delivery_app"
+        applicationId = "com.zyvo.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
