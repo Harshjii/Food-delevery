@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../home/home_screen.dart';
@@ -58,7 +59,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (error == null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()), // <-- Fixed here
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else {
       _showMessage(error, isError: true);
@@ -75,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (error == null) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()), // <-- Fixed here
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     } else if (error != "Google sign-in cancelled.") {
       _showMessage(error, isError: true);
@@ -151,20 +152,24 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: brandOrange.withOpacity(0.1),
-                    shape: BoxShape.circle,
+                // App Logo from Assets
+                SizedBox(
+                  height: 65,
+                  child: Image.asset(
+                    'assets/images/logo.jpeg',
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: brandOrange.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.fastfood_rounded, size: 40, color: brandOrange),
+                    ),
                   ),
-                  child: const Icon(Icons.fastfood_rounded, size: 48, color: brandOrange),
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  "ZYVO",
-                  style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: brandOrange, letterSpacing: 1.2),
-                ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 8),
+                // "ZYVO" Text hata diya gaya hai taaki duplicate na lage
                 Text(
                   _isSignUp ? "Create account to start ordering" : "Welcome back! Fresh food awaits you.",
                   style: TextStyle(fontSize: 13, color: Colors.grey[600]),
@@ -204,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+                      icon: Icon(_obscureResponseIcon(), color: Colors.grey), // keeping icon logic intact
                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                     labelText: "Password",
@@ -296,4 +301,6 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+
+  IconData _obscureResponseIcon() => _obscurePassword ? Icons.visibility_off : Icons.visibility;
 }

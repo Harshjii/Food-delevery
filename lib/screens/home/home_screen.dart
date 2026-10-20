@@ -15,7 +15,7 @@ import 'favorites_screen.dart';
 import 'orders_screen.dart';
 import 'notifications_screen.dart';
 import 'restaurant_detail_screen.dart';
-import 'all_foods_screen.dart'; // All Foods Screen import
+import 'all_foods_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,8 +25,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedCategoryIndex = 1;
-
   // Filter states
   String _selectedFilterCategory = 'All';
   double _maxPriceFilter = 2000.0;
@@ -35,12 +33,23 @@ class _HomeScreenState extends State<HomeScreen> {
   // Secret Admin Password
   static const String _adminSecretPasscode = "zyvo@admin2026";
 
-  final List<Map<String, dynamic>> _categories = [
-    {'title': 'Meat', 'icon': '🥩'},
-    {'title': 'Fast Food', 'icon': '🍔'},
-    {'title': 'Sushi', 'icon': '🍣'},
-    {'title': 'Drinks', 'icon': '🥤'},
-  ];
+  // Smart Helper function for category clean icons
+  IconData _getCategoryIcon(String categoryName) {
+    String name = categoryName.toLowerCase();
+    if (name.contains('fast') || name.contains('burger') || name.contains('pizza')) {
+      return Icons.fastfood_rounded;
+    } else if (name.contains('drink') || name.contains('beverage') || name.contains('juice')) {
+      return Icons.local_bar_rounded;
+    } else if (name.contains('meat') || name.contains('chicken') || name.contains('non-veg')) {
+      return Icons.kebab_dining_rounded;
+    } else if (name.contains('dessert') || name.contains('cake') || name.contains('sweet')) {
+      return Icons.cake_rounded;
+    } else if (name.contains('veg') || name.contains('salad')) {
+      return Icons.eco_rounded;
+    } else {
+      return Icons.restaurant_menu_rounded;
+    }
+  }
 
   // Secret Admin Access Dialog
   void _openSecretAdminDialog() {
@@ -103,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Filter Bottom Sheet with Price & Category
+  // Filter Bottom Sheet with Price & Live Categories
   void _showFilterBottomSheet() {
     String tempCategory = _selectedFilterCategory;
     double tempPrice = _maxPriceFilter;
@@ -118,71 +127,88 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, setStateModal) {
             return Padding(
               padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Filter Options',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Food Category', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8.0,
-                    children: ['All', 'Meat', 'Fast Food', 'Sushi', 'Drinks'].map((category) {
-                      return ChoiceChip(
-                        label: Text(category),
-                        selected: tempCategory == category,
-                        selectedColor: const Color(0xFFFF5E00),
-                        labelStyle: TextStyle(
-                          color: tempCategory == category ? Colors.white : Colors.black87,
-                          fontSize: 12,
-                        ),
-                        onSelected: (selected) {
-                          setStateModal(() {
-                            tempCategory = category;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                  Text('Max Price (Rs. ${tempPrice.round()})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  Slider(
-                    value: tempPrice,
-                    min: 50.0,
-                    max: 2000.0,
-                    divisions: 39,
-                    activeColor: const Color(0xFFFF5E00),
-                    onChanged: (value) {
-                      setStateModal(() {
-                        tempPrice = value;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF5E00),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _selectedFilterCategory = tempCategory;
-                          _maxPriceFilter = tempPrice;
-                        });
-                        Navigator.pop(context);
-                      },
-                      child: const Text('Apply Filters', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Filter Options',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    const Text('Food Category', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance.collection('categories').snapshots(),
+                      builder: (context, snapshot) {
+                        List<String> categories = ['All'];
+                        if (snapshot.hasData) {
+                          for (var doc in snapshot.data!.docs) {
+                            var data = doc.data() as Map<String, dynamic>;
+                            if (data['name'] != null) {
+                              categories.add(data['name']);
+                            }
+                          }
+                        }
+
+                        return Wrap(
+                          spacing: 8.0,
+                          children: categories.map((category) {
+                            return ChoiceChip(
+                              label: Text(category),
+                              selected: tempCategory == category,
+                              selectedColor: const Color(0xFFFF5E00),
+                              labelStyle: TextStyle(
+                                color: tempCategory == category ? Colors.white : Colors.black87,
+                                fontSize: 12,
+                              ),
+                              onSelected: (selected) {
+                                setStateModal(() {
+                                  tempCategory = category;
+                                });
+                              },
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    Text('Max Price (Rs. ${tempPrice.round()})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Slider(
+                      value: tempPrice,
+                      min: 50.0,
+                      max: 2000.0,
+                      divisions: 39,
+                      activeColor: const Color(0xFFFF5E00),
+                      onChanged: (value) {
+                        setStateModal(() {
+                          tempPrice = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFF5E00),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _selectedFilterCategory = tempCategory;
+                            _maxPriceFilter = tempPrice;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Apply Filters', style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -223,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final matchesSearch = food.name.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesPrice = food.price <= _maxPriceFilter;
       final matchesCategory = _selectedFilterCategory == 'All' ||
-          food.category.toLowerCase() == _selectedFilterCategory.toLowerCase();
+          food.category.toLowerCase().trim() == _selectedFilterCategory.toLowerCase().trim();
       return matchesSearch && matchesPrice && matchesCategory;
     }).toList();
 
@@ -232,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final displayName = user?.displayName?.trim();
     final firstName = (displayName != null && displayName.isNotEmpty)
         ? displayName.split(' ').first
-        : (user?.email?.split('@')?.first ?? 'Foodie');
+        : (user?.email?.split('@').first ?? 'Foodie');
 
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFB),
@@ -331,48 +357,73 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 18),
 
-              // Categories Row
+              // --- DYNAMIC LIVE CATEGORIES FROM FIREBASE WITH CLEAN ICONS ---
               SizedBox(
                 height: 80,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _categories.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 14),
-                  itemBuilder: (context, index) {
-                    final isSelected = index == _selectedCategoryIndex;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedCategoryIndex = index;
-                          _selectedFilterCategory = _categories[index]['title'];
-                        });
-                      },
-                      child: Column(
-                        children: [
-                          Container(
-                            height: 52,
-                            width: 52,
-                            decoration: BoxDecoration(
-                              color: isSelected ? const Color(0xFFFFF3ED) : Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: isSelected ? brandColor : Colors.grey.shade200,
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance.collection('categories').snapshots(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator(color: brandColor));
+                    }
+
+                    final docs = snapshot.data!.docs;
+
+                    return ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: docs.length + 1, // +1 for "All" category option
+                      separatorBuilder: (_, __) => const SizedBox(width: 14),
+                      itemBuilder: (context, index) {
+                        String catName = 'All';
+
+                        if (index == 0) {
+                          catName = 'All';
+                        } else {
+                          final data = docs[index - 1].data() as Map<String, dynamic>;
+                          catName = data['name'] ?? '';
+                        }
+
+                        final isSelected = _selectedFilterCategory == catName;
+                        final IconData displayIcon = index == 0 ? Icons.local_fire_department_rounded : _getCategoryIcon(catName);
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedFilterCategory = catName;
+                            });
+                          },
+                          child: Column(
+                            children: [
+                              Container(
+                                height: 52,
+                                width: 52,
+                                decoration: BoxDecoration(
+                                  color: isSelected ? const Color(0xFFFFF3ED) : Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: isSelected ? brandColor : Colors.grey.shade200,
+                                  ),
+                                ),
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  displayIcon,
+                                  color: isSelected ? brandColor : Colors.grey.shade700,
+                                  size: 24,
+                                ),
                               ),
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(_categories[index]['icon'], style: const TextStyle(fontSize: 24)),
+                              const SizedBox(height: 6),
+                              Text(
+                                catName,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: isSelected ? Colors.black87 : Colors.grey,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _categories[index]['title'],
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? Colors.black87 : Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -386,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   stream: FirebaseFirestore.instance.collection('coupons').where('isActive', isEqualTo: true).snapshots(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return Center(child: CircularProgressIndicator(color: brandColor));
+                      return const Center(child: CircularProgressIndicator(color: brandColor));
                     }
 
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {

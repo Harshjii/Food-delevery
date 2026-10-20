@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/auth_service.dart';
 import '../home/home_screen.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -13,29 +14,63 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
+
+  bool _isLoading = false;
   bool _obscurePassword = true;
 
-  void _handleSignUp() {
-    if (_nameController.text.trim().isEmpty ||
-        _emailController.text.trim().isEmpty ||
-        _phoneController.text.trim().isEmpty ||
-        _passwordController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all details")),
-      );
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSignUp() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
+      _showMessage("Please fill all details", isError: true);
       return;
     }
 
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (route) => false,
+    setState(() => _isLoading = true);
+
+    // Firebase Authentication ke through sign up
+    final error = await _authService.signUp(name: name, email: email, password: password);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (error == null) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+            (route) => false,
+      );
+    } else {
+      _showMessage(error, isError: true);
+    }
+  }
+
+  void _showMessage(String msg, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? Colors.redAccent : const Color(0xFFFF5E00),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    const brandGreen = Color(0xFF53B175);
+    const brandOrange = Color(0xFFFF5E00);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -119,12 +154,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: brandGreen,
+                    backgroundColor: brandOrange,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
-                  onPressed: _handleSignUp,
-                  child: const Text("Sign Up", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  onPressed: _isLoading ? null : _handleSignUp,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)
+                      : const Text("Sign Up", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 24),
@@ -134,7 +171,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   Text("Already have an account? ", style: TextStyle(color: Colors.grey[600])),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-                    child: const Text("Log In", style: TextStyle(color: brandGreen, fontWeight: FontWeight.bold)),
+                    child: const Text("Log In", style: TextStyle(color: brandOrange, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

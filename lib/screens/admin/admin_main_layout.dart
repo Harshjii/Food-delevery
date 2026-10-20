@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'tabs/dashboard_tab.dart';
 import 'tabs/order_management_tab.dart';
 import 'tabs/restaurant_tab.dart';
@@ -10,6 +10,7 @@ import 'tabs/coupon_tab.dart';
 import 'tabs/banner_tab.dart';
 import 'tabs/notification_tab.dart';
 import 'tabs/settings_tab.dart';
+import 'tabs/categories_tab.dart'; // <--- Categories tab import kiya gaya hai
 
 class AdminMainLayout extends StatefulWidget {
   const AdminMainLayout({super.key});
@@ -21,6 +22,7 @@ class AdminMainLayout extends StatefulWidget {
 class _AdminMainLayoutState extends State<AdminMainLayout> {
   int _selectedIndex = 0;
 
+  // Saare tabs ki list me CategoriesTab joda gaya hai
   final List<Widget> _tabs = const [
     DashboardTab(),
     OrderManagementTab(),
@@ -33,8 +35,10 @@ class _AdminMainLayoutState extends State<AdminMainLayout> {
     BannerTab(),
     NotificationTab(),
     SettingsTab(),
+    CategoriesTab(), // <--- Yahan add kiya gaya hai
   ];
 
+  // Sidebar menu items me Categories ka option joda gaya hai
   final List<Map<String, dynamic>> _menuItems = [
     {'title': 'Dashboard', 'icon': Icons.dashboard},
     {'title': 'Orders', 'icon': Icons.shopping_bag},
@@ -47,6 +51,7 @@ class _AdminMainLayoutState extends State<AdminMainLayout> {
     {'title': 'Banners', 'icon': Icons.view_carousel},
     {'title': 'Notifications', 'icon': Icons.notifications},
     {'title': 'Settings', 'icon': Icons.settings},
+    {'title': 'Categories', 'icon': Icons.category}, // <--- Yahan add kiya gaya hai
   ];
 
   @override
@@ -125,7 +130,7 @@ class _AdminMainLayoutState extends State<AdminMainLayout> {
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                         blurRadius: 4,
                         offset: const Offset(0, 2),
                       ),

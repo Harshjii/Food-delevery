@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/food_item.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/favorites_provider.dart'; // <--- FavoritesProvider import kiya gaya hai
 import '../cart/cart_screen.dart';
 
 class FoodDetailScreen extends StatefulWidget {
@@ -45,7 +46,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         height: 210,
         width: 210,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(Icons.fastfood, size: 80, color: Color(0xFF53B175)),
+        errorBuilder: (_, __, ___) => const Icon(Icons.fastfood, size: 80, color: Color(0xFFFF5E00)),
       );
     } else {
       return Image.file(
@@ -53,15 +54,18 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
         height: 210,
         width: 210,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(Icons.fastfood, size: 80, color: Color(0xFF53B175)),
+        errorBuilder: (_, __, ___) => const Icon(Icons.fastfood, size: 80, color: Color(0xFFFF5E00)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const brandGreen = Color(0xFF53B175);
+    const brandColor = Color(0xFFFF5E00);
     final cart = Provider.of<CartProvider>(context, listen: false);
+    final favoritesProv = Provider.of<FavoritesProvider>(context); // <--- Provider read kiya gaya hai
+    final isFav = favoritesProv.isFavorite(widget.food); // <--- Check kiya hai ki item favorite hai ya nahi
+
     const List<String> standardSizes = ['Small', 'Medium', 'Large'];
 
     return Scaffold(
@@ -74,8 +78,28 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          IconButton(icon: const Icon(Icons.favorite_border, color: Colors.black87), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.share_outlined, color: Colors.black87), onPressed: () {}),
+          // --- WORKING FAVORITES HEART BUTTON ---
+          IconButton(
+            icon: Icon(
+              isFav ? Icons.favorite : Icons.favorite_border,
+              color: isFav ? Colors.red : Colors.black87,
+            ),
+            onPressed: () {
+              favoritesProv.toggleFavorite(widget.food);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    isFav ? "Removed from Favorites ❌" : "Added to Favorites ❤️",
+                  ),
+                  duration: const Duration(milliseconds: 700),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.share_outlined, color: Colors.black87),
+            onPressed: () {},
+          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -97,7 +121,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                 const Text("🍕 ", style: TextStyle(fontSize: 14)),
                 Text(widget.food.restaurant, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                 const SizedBox(width: 14),
-                const Icon(Icons.star_rounded, size: 18, color: brandGreen),
+                const Icon(Icons.star_rounded, size: 18, color: brandColor),
                 Text(" ${widget.food.rating} (${widget.food.reviewsCount}k)", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               ],
             ),
@@ -122,11 +146,11 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                         decoration: BoxDecoration(
                           color: !isAvailable
                               ? Colors.grey.shade100
-                              : (isSelected ? const Color(0xFFE8F5E9) : Colors.white),
+                              : (isSelected ? const Color(0xFFFFF3ED) : Colors.white),
                           border: Border.all(
                             color: !isAvailable
                                 ? Colors.grey.shade300
-                                : (isSelected ? brandGreen : Colors.grey.shade300),
+                                : (isSelected ? brandColor : Colors.grey.shade300),
                           ),
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -137,7 +161,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                                   ? (isSelected ? Icons.radio_button_checked : Icons.radio_button_off)
                                   : Icons.block,
                               size: 18,
-                              color: isAvailable ? (isSelected ? brandGreen : Colors.grey) : Colors.red.shade300,
+                              color: isAvailable ? (isSelected ? brandColor : Colors.grey) : Colors.red.shade300,
                             ),
                             const SizedBox(height: 6),
                             Text(
@@ -168,7 +192,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
               const SizedBox(height: 24),
             ],
 
-            // --- INGREDIENTS SECTION (Sirf tabhi dikhega jab admin ne add kiya ho) ---
+            // --- INGREDIENTS SECTION ---
             if (widget.food.ingredients.isNotEmpty) ...[
               const Text("Add Ingredients", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 12),
@@ -184,7 +208,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
 
                   return CheckboxListTile(
                     contentPadding: EdgeInsets.zero,
-                    activeColor: brandGreen,
+                    activeColor: brandColor,
                     value: isChecked,
                     title: Text(ingName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                     subtitle: Text("+Rs. $ingPrice", style: const TextStyle(fontSize: 12, color: Colors.grey)),
@@ -240,7 +264,7 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
                 height: 52,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: brandGreen,
+                    backgroundColor: brandColor,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),

@@ -31,9 +31,10 @@ class FoodItem {
     required this.ingredients,
   });
 
-  // Convert object to JSON for Firestore
-  Map<String, dynamic> toJson() {
+  // Convert object to JSON / Map for Firestore
+  Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'name': name,
       'restaurant': restaurant,
       'price': price,
@@ -47,6 +48,9 @@ class FoodItem {
       'ingredients': ingredients,
     };
   }
+
+  // Alias for compatibility if needed elsewhere
+  Map<String, dynamic> toJson() => toMap();
 
   // Factory constructor to create FoodItem from Firestore Document
   factory FoodItem.fromFirestore(DocumentSnapshot doc) {
@@ -82,6 +86,33 @@ class FoodItem {
           {'name': 'Mashroom (50 gm)', 'price': 0.40}
         ],
       ),
+    );
+  }
+
+  // Factory constructor to create FoodItem from a Map (used in Providers)
+  factory FoodItem.fromMap(Map<String, dynamic> map, String documentId) {
+    Map<String, double?> parsedSizes = {};
+    if (map['sizePrices'] != null) {
+      (map['sizePrices'] as Map).forEach((key, value) {
+        parsedSizes[key.toString()] = value != null ? (value as num).toDouble() : null;
+      });
+    }
+
+    return FoodItem(
+      id: documentId,
+      name: map['name'] ?? '',
+      restaurant: map['restaurant'] ?? '',
+      price: (map['price'] as num?)?.toDouble() ?? 0.0,
+      rating: (map['rating'] as num?)?.toDouble() ?? 0.0,
+      reviewsCount: map['reviewsCount'] ?? 0,
+      calories: map['calories'] ?? 0,
+      deliveryTimeMin: map['deliveryTimeMin'] ?? 20,
+      imageUrl: map['imageUrl'] ?? '',
+      category: map['category'] ?? '',
+      sizePrices: parsedSizes,
+      ingredients: map['ingredients'] != null
+          ? List<Map<String, dynamic>>.from(map['ingredients'])
+          : [],
     );
   }
 }

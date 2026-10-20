@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'providers/cart_provider.dart';
 import 'providers/menu_provider.dart';
+import 'providers/favorites_provider.dart'; // <--- FavoritesProvider import kiya gaya hai
 import 'screens/auth/login_screen.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/admin/admin_main_layout.dart';
@@ -34,6 +35,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => MenuProvider()),
+        ChangeNotifierProvider(create: (_) => FavoritesProvider()), // <--- Yahan add kiya gaya hai
       ],
       child: const FoodDeliveryApp(),
     ),
