@@ -14,11 +14,12 @@ class AuthService {
   Stream<User?> get userStream => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
-  // Sign Up with Name, Email & Password
+  // Sign Up with Name, Email, Password & Phone Number
   Future<String?> signUp({
     required String name,
     required String email,
     required String password,
+    required String phone, // <-- Yahan phone number add kiya gaya hai
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -31,11 +32,13 @@ class AuthService {
         await user.updateDisplayName(name.trim());
         await user.reload();
 
+        // Firestore me user document ke andar phone aur joined date save ho rahi hai
         await _firestore.collection('users').doc(user.uid).set({
           'uid': user.uid,
           'name': name.trim(),
           'email': email.trim(),
-          'createdAt': FieldValue.serverTimestamp(),
+          'phone': phone.trim(), // <-- Phone number Firestore me store hoga
+          'createdAt': FieldValue.serverTimestamp(), // <-- Joined date store hogi
         });
       }
       return null;
@@ -84,6 +87,8 @@ class AuthService {
           'uid': user.uid,
           'name': user.displayName ?? 'Foodie',
           'email': user.email ?? '',
+          'phone': user.phoneNumber ?? 'N/A', // Google sign-in me agar phone na ho toh N/A
+          'createdAt': FieldValue.serverTimestamp(), // Agar pehli baar sign-in hai toh date set hogi
           'lastLogin': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       }

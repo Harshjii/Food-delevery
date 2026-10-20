@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../home/home_screen.dart';
-import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,6 +14,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController(); // Phone Number Controller added
   final _passwordCtrl = TextEditingController();
   final AuthService _authService = AuthService();
 
@@ -26,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
+    _phoneCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -34,13 +35,20 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailCtrl.text.trim();
     final pass = _passwordCtrl.text.trim();
     final name = _nameCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim();
 
-    if (_isSignUp && name.isEmpty) {
-      _showMessage("Apna naam enter karein");
-      return;
+    if (_isSignUp) {
+      if (name.isEmpty) {
+        _showMessage("Apna naam enter karein", isError: true);
+        return;
+      }
+      if (phone.isEmpty) {
+        _showMessage("Phone number enter karein", isError: true);
+        return;
+      }
     }
     if (email.isEmpty || pass.isEmpty) {
-      _showMessage("Email aur Password daalna zaroori hai");
+      _showMessage("Email aur Password daalna zaroori hai", isError: true);
       return;
     }
 
@@ -48,7 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     String? error;
     if (_isSignUp) {
-      error = await _authService.signUp(name: name, email: email, password: pass);
+      // Pass phone number here
+      error = await _authService.signUp(name: name, email: email, password: pass, phone: phone);
     } else {
       error = await _authService.signIn(email: email, password: pass);
     }
@@ -169,7 +178,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // "ZYVO" Text hata diya gaya hai taaki duplicate na lage
                 Text(
                   _isSignUp ? "Create account to start ordering" : "Welcome back! Fresh food awaits you.",
                   style: TextStyle(fontSize: 13, color: Colors.grey[600]),
@@ -177,13 +185,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 28),
 
-                // Name field only on Sign Up
+                // Name & Phone fields only on Sign Up
                 if (_isSignUp) ...[
                   TextField(
                     controller: _nameCtrl,
                     decoration: InputDecoration(
                       prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
                       labelText: "Full Name",
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _phoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.phone_outlined, color: Colors.grey),
+                      labelText: "Phone Number",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
@@ -209,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscureResponseIcon(), color: Colors.grey), // keeping icon logic intact
+                      icon: Icon(_obscureResponseIcon(), color: Colors.grey),
                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                     labelText: "Password",

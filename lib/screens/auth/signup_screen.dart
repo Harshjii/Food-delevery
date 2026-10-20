@@ -41,8 +41,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     setState(() => _isLoading = true);
 
-    // Firebase Authentication ke through sign up
-    final error = await _authService.signUp(name: name, email: email, password: password);
+    // Firebase Authentication & Firestore ke through sign up (Phone number pass kiya gaya hai)
+    final error = await _authService.signUp(
+      name: name,
+      email: email,
+      password: password,
+      phone: phone, // <-- Yahan phone number pass ho raha hai
+    );
 
     if (!mounted) return;
     setState(() => _isLoading = false);
